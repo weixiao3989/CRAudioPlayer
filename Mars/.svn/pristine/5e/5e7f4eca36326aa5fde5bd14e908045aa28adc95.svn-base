@@ -1,0 +1,38 @@
+//
+//  CameraPickerController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/26.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+
+@protocol CameraPickerDelegate;
+
+@interface CameraPickerController : UITableViewController <MyCameraDelegate> {
+    
+    MyCamera *camera;
+    NSArray *labelItems;
+    
+    unsigned int newValue[4];
+    
+    id<CameraPickerDelegate> delegate;
+}
+
+@property (nonatomic, retain) MyCamera *camera;
+@property (nonatomic, retain) NSArray *labelItems;
+@property (nonatomic, assign) id<CameraPickerDelegate> delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<CameraPickerDelegate>)delegate;
+- (IBAction)back:(id)sender;
+- (IBAction)done:(id)sender;
+
+@end
+
+@protocol CameraPickerDelegate
+
+//- (void)didSetCameraChannel;
+
+@end

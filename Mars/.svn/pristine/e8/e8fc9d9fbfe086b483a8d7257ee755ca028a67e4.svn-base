@@ -1,0 +1,170 @@
+//
+//  DayPickerController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/26.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "DayPickerController.h"
+#import "AppDelegate.h"
+
+@interface DayPickerController ()
+
+@end
+
+@implementation DayPickerController
+
+@synthesize camera;
+@synthesize labelItems;
+@synthesize delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<DayPickerDelegate>)delegate_ {
+    
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        self.delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (IBAction)done:(id)sender {
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    for (int i =0;i<=6;i++){
+        appDelegate->chooseDay[i] = newValue[i];
+    }
+
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - View lifecycle
+
+- (void)viewDidLoad
+{
+    labelItems = [[NSArray alloc] initWithObjects:
+                  NSLocalizedString(@"Sunday", @""),
+                  NSLocalizedString(@"Monday", @""),
+                  NSLocalizedString(@"Tuesday", @""),
+                  NSLocalizedString(@"Wednesday", @""),
+                  NSLocalizedString(@"Thursday", @""),
+                  NSLocalizedString(@"Friday", @""),
+                  NSLocalizedString(@"Saturday", @""),
+                  nil];
+    
+    UIBarButtonItem *cancelButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Cancel", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Done", @"") style:UIBarButtonItemStylePlain target:self action:@selector(done:)];
+    
+    self.navigationItem.leftBarButtonItem = cancelButton;
+    self.navigationItem.rightBarButtonItem = doneButton;
+    
+    [cancelButton release];
+    [doneButton release];
+    
+    self.navigationItem.title = NSLocalizedString(@"Camera", @"");
+    
+    
+    [super viewDidLoad];
+}
+
+- (void)viewDidUnload {
+    
+    self.delegate = nil;
+    self.labelItems = nil;
+    self.camera = nil;
+    [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    self.camera.delegate2 = self;
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    for (int i =0;i<=6;i++){
+        newValue[i] = appDelegate->chooseDay[i];
+    }
+    
+    [super viewWillAppear:animated];
+}
+
+- (void)dealloc {
+    
+    self.delegate = nil;
+    [self.labelItems release];
+    [self.camera release];
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView
+ numberOfRowsInSection:(NSInteger)section {
+    return (section == 0) ? [self.labelItems count] : 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    static NSString *DayPickerTableIdentifier = @"DayPickerTableIdentifier";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:DayPickerTableIdentifier];
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault reuseIdentifier:DayPickerTableIdentifier]
+                autorelease];
+    }
+    
+    [cell setAccessoryType:UITableViewCellAccessoryNone];
+    
+    NSString *weekString = NSLocalizedString(@"Every ", @"");
+    
+    cell.textLabel.text = [weekString stringByAppendingString:labelItems[row]];
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    for (int i=0;i<=6;i++){
+        if (row == i && appDelegate->chooseDay[i]==1) {
+            cell.accessoryType = UITableViewCellAccessoryCheckmark;
+        }
+    }
+    
+    return cell;
+
+}
+
+#pragma mark - TableView Delegate Methods
+- (void)tableView:(UITableView *)tableView
+didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+    
+    if (cell.accessoryType == UITableViewCellAccessoryCheckmark){
+        cell.accessoryType = UITableViewCellAccessoryNone;
+        newValue[row] = 0;
+    } else {
+        cell.accessoryType = UITableViewCellAccessoryCheckmark;
+        newValue[row] = 1;
+    }
+    
+    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+@end

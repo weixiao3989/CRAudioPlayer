@@ -1,0 +1,49 @@
+//
+//  PlayerControlPanel.h
+//
+//  Created by Eden Li on 2014/2/19.
+//  Copyright (c) 2014年 Darktt Personal Company. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+typedef NS_ENUM(NSUInteger, ControlButtonIndex) {
+    ControlButtonIndexBackward = 0,
+    ControlButtonIndexSpeedDown,
+    ControlButtonIndexPlayPause,
+    ControlButtonIndexSpeedUp,
+    ControlButtonIndexFastForward,
+    ControlButtonIndexStopPlay
+};
+
+@protocol PlayerControlPanelDelegate;
+
+@interface PlayerControlPanel : UIView
+
+//@property (assign) NSTimeInterval maximumPlayTime; // unit is second.
+@property (assign) NSUInteger maximumPlayTime;
+@property (assign) NSTimeInterval currentPlayedTime; // unit is second.
+@property (nonatomic, retain) UIColor *textTintColor;
+@property (assign, readonly, getter = isPlaying) BOOL playing;
+//@property (assign) CGSize winSize;
+// Get control panel height.
++ (CGFloat)panelHeight;
+
+// It will ignore size information from recevie frame, size aways is same size.
++ (instancetype)controlPanelWithFrame:(CGRect)frame setwinSize:(CGSize)wSize delegate:(id<PlayerControlPanelDelegate>)delegate;
+
+// Gat control panel instance from super view.
+- (void)changeImgToPlay;
++ (PlayerControlPanel *)controlPanelInView:(UIView *)superview tag:(NSUInteger)tag;
+
+@end
+
+@protocol PlayerControlPanelDelegate <NSObject>
+
+- (void)controlPanel:(PlayerControlPanel *)controlPanel clickedControlButtonAtIndex:(ControlButtonIndex)buttonIndex;
+
+@optional
+
+- (void)controlPanel:(PlayerControlPanel *)controlPanel didSeekToTime:(NSTimeInterval)seekTime;
+
+@end

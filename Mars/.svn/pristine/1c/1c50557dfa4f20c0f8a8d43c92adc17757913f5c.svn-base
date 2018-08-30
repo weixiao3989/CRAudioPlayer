@@ -1,0 +1,302 @@
+//
+//  GetRecScheduleController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/25.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "GetRecScheduleController.h"
+#import "UIImage+DrawImage.h"
+#import <IOTCamera/AVIOCTRLDEFs.h>
+#import <QuartzCore/QuartzCore.h>
+
+
+@implementation GetRecScheduleController
+
+@synthesize camera;
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    [self  dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (IBAction)next:(id)sender {
+    
+    if (DayOfWeek==6){
+        DayOfWeek = 0;
+    } else {
+        DayOfWeek++;
+    }
+    
+//    SMsgAVIoctrlGetScheduleSettingReq *structGetSchedule = malloc(sizeof(SMsgAVIoctrlGetScheduleSettingReq));
+//    memset(structGetSchedule, 0, sizeof(SMsgAVIoctrlGetScheduleSettingReq));
+//    
+//    structGetSchedule->dayOfWeek = DayOfWeek;
+//    
+//    [camera sendIOCtrlToChannel:0
+//                           Type:IOTYPE_USER_IPCAM_GET_SCHEDULESETTING_REQ
+//                           Data:(char *)structGetSchedule
+//                       DataSize:sizeof(SMsgAVIoctrlGetScheduleSettingReq)];
+//    free(structGetSchedule);
+    
+    switch (DayOfWeek) {
+        case 0:
+            self.navigationItem.title = NSLocalizedString(@"Sunday", @"");
+            break;
+        case 1:
+            self.navigationItem.title = NSLocalizedString(@"Monday", @"");
+            break;
+        case 2:
+            self.navigationItem.title = NSLocalizedString(@"Tuesday", @"");
+            break;
+        case 3:
+            self.navigationItem.title = NSLocalizedString(@"Wednesday", @"");
+            break;
+        case 4:
+            self.navigationItem.title = NSLocalizedString(@"Thursday", @"");
+            break;
+        case 5:
+            self.navigationItem.title = NSLocalizedString(@"Friday", @"");
+            break;
+        case 6:
+            self.navigationItem.title = NSLocalizedString(@"Saturday", @"");
+            break;
+        default:
+            break;
+    }
+    
+    [self drawRect];
+}
+
+- (IBAction)forward:(id)sender {
+    
+    if (DayOfWeek==0){
+        DayOfWeek = 6;
+    } else {
+        DayOfWeek--;
+    }
+    
+//    SMsgAVIoctrlGetScheduleSettingReq *structGetSchedule = malloc(sizeof(SMsgAVIoctrlGetScheduleSettingReq));
+//    memset(structGetSchedule, 0, sizeof(SMsgAVIoctrlGetScheduleSettingReq));
+//    
+//    structGetSchedule->dayOfWeek = DayOfWeek;
+//    
+//    [camera sendIOCtrlToChannel:0
+//                           Type:IOTYPE_USER_IPCAM_GET_SCHEDULESETTING_REQ
+//                           Data:(char *)structGetSchedule
+//                       DataSize:sizeof(SMsgAVIoctrlGetScheduleSettingReq)];
+//    free(structGetSchedule);
+    
+    switch (DayOfWeek) {
+        case 0:
+            self.navigationItem.title = NSLocalizedString(@"Sunday", @"");
+            break;
+        case 1:
+            self.navigationItem.title = NSLocalizedString(@"Monday", @"");
+            break;
+        case 2:
+            self.navigationItem.title = NSLocalizedString(@"Tuesday", @"");
+            break;
+        case 3:
+            self.navigationItem.title = NSLocalizedString(@"Wednesday", @"");
+            break;
+        case 4:
+            self.navigationItem.title = NSLocalizedString(@"Thursday", @"");
+            break;
+        case 5:
+            self.navigationItem.title = NSLocalizedString(@"Friday", @"");
+            break;
+        case 6:
+            self.navigationItem.title = NSLocalizedString(@"Saturday", @"");
+            break;
+        default:
+            break;
+    }
+    
+    [self drawRect];
+}
+
+- (void)drawRect {
+    
+    if (reciveALL==YES){
+        for (UIView *view in self.view.subviews) {
+            [view removeFromSuperview];
+        }
+        
+        UIImageView *scheduleView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"480x300.png"]];
+        [scheduleView setFrame:CGRectMake( 0, -30, 480, 300)];
+        [self.view addSubview:scheduleView];
+        
+        for(int i=0;i<=23;i++){
+            for (int j=0;j<=3;j++){
+                if (rec[DayOfWeek][i][j]==1){
+                    rect = [UIImage imageWithColor:[[UIColor blueColor] colorWithAlphaComponent:0.5] size:CGSizeMake(15,54)];
+                    UIImageView *drawRect =[[UIImageView alloc]initWithImage:rect];
+                    [drawRect setFrame:CGRectMake(54+16*i,30+55*j, 15, 54)];
+                    [self.view addSubview:drawRect];
+                } else if (rec[DayOfWeek][i][j]==2){
+                    rect = [UIImage imageWithColor:[[UIColor redColor] colorWithAlphaComponent:0.5] size:CGSizeMake(15,54)];
+                    UIImageView *drawRect =[[UIImageView alloc]initWithImage:rect];
+                    [drawRect setFrame:CGRectMake(54+16*i,30+55*j, 15, 54)];
+                    [self.view addSubview:drawRect];
+                }
+            }
+        }
+    }
+    
+//    //Test
+//    for(int i=0;i<=23;i++){
+//        for (int j=0;j<=3;j++){
+//            
+//            if (i%2==0 && j%3==0 && i*j%(7-DayOfWeek/2)==0){
+//                
+//                rect = [UIImage imageWithColor:[[UIColor blueColor] colorWithAlphaComponent:0.5] size:CGSizeMake(15,54)];
+//                UIImageView *drawRect =[[UIImageView alloc]initWithImage:rect];
+//                [drawRect setFrame:CGRectMake(54+16*i,30+55*j, 15, 54)];
+//                [self.view addSubview:drawRect];
+//                
+//            } else if (i%3==0 && j%2==0 && i*j%(7-DayOfWeek/2)==1){
+//                
+//                rect = [UIImage imageWithColor:[[UIColor redColor] colorWithAlphaComponent:0.5] size:CGSizeMake(15,54)];
+//                UIImageView *drawRect =[[UIImageView alloc]initWithImage:rect];
+//                [drawRect setFrame:CGRectMake(54+16*i,30+55*j, 15, 54)];
+//                [self.view addSubview:drawRect];
+//            }
+//        }
+//    }
+    
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    
+    DayOfWeek = 0;
+    reciveIOC = 0;
+    reciveALL = NO;
+    
+    for (int i=0;i<=6;i++){
+        SMsgAVIoctrlGetScheduleSettingReq *structGetSchedule = malloc(sizeof(SMsgAVIoctrlGetScheduleSettingReq));
+        memset(structGetSchedule, 0, sizeof(SMsgAVIoctrlGetScheduleSettingReq));
+        
+        structGetSchedule->dayOfWeek = i;
+        
+        [camera sendIOCtrlToChannel:0
+                               Type:IOTYPE_USER_IPCAM_GET_SCHEDULESETTING_REQ
+                               Data:(char *)structGetSchedule
+                           DataSize:sizeof(SMsgAVIoctrlGetScheduleSettingReq)];
+        free(structGetSchedule);
+    }
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.navigationController.navigationBar.translucent = NO;
+    
+    camera.delegate2 = self;
+    
+    [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationLandscapeLeft animated:YES];
+    
+    self.navigationItem.title = NSLocalizedString(@"Sunday", @"");
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Back", @"")
+                                             style:UIBarButtonItemStylePlain
+                                             target:self
+                                             action:@selector(back:)];
+    
+    
+    UIBarButtonItem *forward = [[UIBarButtonItem alloc]
+                                  initWithImage:[UIImage imageNamed:@"icon_forward.png"]
+                                  style:UIBarButtonItemStylePlain
+                                  target:self
+                                  action:@selector(forward:)];
+    
+    UIBarButtonItem *next = [[UIBarButtonItem alloc]
+                             initWithImage:[UIImage imageNamed:@"icon_next.png"]
+                             style:UIBarButtonItemStylePlain
+                             target:self
+                             action:@selector(next:)];
+
+    NSArray *rightButtonItems = [[NSArray alloc] initWithObjects: next, forward, nil];
+    
+    self.navigationItem.rightBarButtonItems = rightButtonItems;
+    
+    UIImageView *scheduleView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"480x300.png"]];
+    [scheduleView setFrame:CGRectMake( 0, -30, 480, 300)];
+    [self.view addSubview:scheduleView];
+    
+    rect = [UIImage imageWithColor:[[UIColor blackColor] colorWithAlphaComponent:0.7] size:CGSizeMake(60,60)];
+    UIImageView *drawRect =[[UIImageView alloc]initWithImage:rect];
+    [drawRect.layer setMasksToBounds:YES];
+    [drawRect.layer setCornerRadius:10.0];
+    [drawRect setFrame:CGRectMake(0,0, 60, 60)];
+    drawRect.center = CGPointMake(245,140);
+    [self.view addSubview:drawRect];
+    
+    showScheduleIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
+    
+    [self.view addSubview:showScheduleIndicator];
+    [showScheduleIndicator startAnimating];
+    showScheduleIndicator.center = CGPointMake(245,140);
+    
+    //[self drawRect];
+}
+
+#pragma mark - MyCameraDelegate Methods
+- (void)camera:(MyCamera *)camera_ _didReceiveIOCtrlWithType:(NSInteger)type Data:(const char *)data DataSize:(NSInteger)size {
+    
+    if (camera_ == camera) {
+        if (type == IOTYPE_USER_IPCAM_GET_SCHEDULESETTING_RESP) {
+            
+            reciveIOC++;
+            
+            SMsgAVIoctrlGetScheduleSettingResp *s = (SMsgAVIoctrlGetScheduleSettingResp*)data;
+            
+            NSInteger day = s->dayOfWeek;
+            
+            for(int i=0;i<=23;i++){
+                for (int j=0;j<=3;j++){
+                    rec[day][i][j] = s->rec[i][j];
+                }
+            }
+            
+            if (reciveIOC==7){
+                reciveALL = YES;
+                [self drawRect];
+            }
+        }
+    }
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    return UIInterfaceOrientationMaskLandscape;
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
+{
+    return NO;
+}
+
+-(BOOL)shouldAutorotate
+{
+    return NO;
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation
+{
+    return UIInterfaceOrientationLandscapeLeft;
+}
+
+@end
+
+

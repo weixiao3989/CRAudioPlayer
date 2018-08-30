@@ -1,0 +1,35 @@
+//
+//  SearchFromController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/26.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+
+@protocol SearchFromDelegate;
+
+@interface SearchFromController : UITableViewController <MyCameraDelegate> {
+    
+    MyCamera *camera;
+    NSArray *labelItems;
+    NSInteger newValue;
+    
+    id<SearchFromDelegate> delegate;
+}
+
+@property (nonatomic, retain) MyCamera *camera;
+@property (nonatomic, retain) NSArray *labelItems;
+@property (nonatomic) NSInteger newValue;
+@property (nonatomic, assign) id<SearchFromDelegate> delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<SearchFromDelegate>)delegate;
+- (IBAction)back:(id)sender;
+
+@end
+
+@protocol SearchFromDelegate
+
+@end

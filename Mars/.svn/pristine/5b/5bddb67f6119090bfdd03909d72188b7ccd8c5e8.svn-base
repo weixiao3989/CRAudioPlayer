@@ -1,0 +1,63 @@
+//
+//  CRAudioQueuePlayer.h
+//
+//  PCM raw data player.
+//
+//  Created by Chris on 2018/7/23.
+//  Copyright © 2018年 Mars. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import <AVFoundation/AVFoundation.h>
+#import <AudioToolbox/AudioToolbox.h>
+
+@interface CRAudioQueuePlayer : NSObject
+
+// 採樣率.
+@property(nonatomic, assign) Float64 sampleRate;
+// 聲道數.
+@property(nonatomic, assign) UInt32 channels;
+// 樣本位數.
+@property(nonatomic, assign) UInt32 bitsPerChannel;
+// 音量.
+@property(nonatomic, assign) CGFloat volume;
+
+
+/**
+ 初始化播放器.
+ *
+ *@param sampleRate     -> 聲音採樣率.
+ *@param channels       -> 音頻聲道數 (1: 單聲道, 2: 雙聲道).
+ *@param bitsPerChannel -> 每個採樣點的樣本位數, 一般為 8 or 16.
+ *@param volume         -> 音量.
+ *
+ */
+- (instancetype)initSampleRate:(Float64)sampleRate
+                ChannelsNumber:(UInt32)channels
+                BitsPerChannel:(UInt32)bitsPerChannel
+                        Volume:(CGFloat)volume;
+
+
+/**
+ 播放數據流數據.
+ *
+ *@param data     -> 音頻數據來源.
+ *
+ */
+- (void)playWithData:(NSData *)data;
+
+
+/**
+ 停止播放器.
+ *
+ *@param inImmediate  -> 是否立即停止播放 (YES: 立即, NO: 播放完 Buffer 後停止).
+ *
+ */
+- (void)stopWithInImmediat:(BOOL)inImmediate;
+
+// 重置播放器.
+- (void)resetPlayer;
+
+
+@end
+

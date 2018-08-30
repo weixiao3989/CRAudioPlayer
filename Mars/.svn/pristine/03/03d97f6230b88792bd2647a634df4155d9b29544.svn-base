@@ -1,0 +1,58 @@
+//
+//  SmartLinkController.h
+//
+//  SmartLink 標頭檔.
+//
+//  Created by Chris on 05/04/18.
+//  Copyright (c) 2018 Mars. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import <SystemConfiguration/CaptiveNetwork.h>
+#import "GCDAsyncSocket.h"
+#import "GCDAsyncUdpSocket.h"
+#import "MarsCloud_Tools.h"
+#import "AppDelegate.h"
+
+#define LABEL_TAG 4096
+
+@interface SmartLinkController : UITableViewController <UITextFieldDelegate, GCDAsyncUdpSocketDelegate, GCDAsyncSocketDelegate>
+{
+    NSInteger stable[256];
+    NSInteger sonkey[256];
+    NSInteger tempPacket[256];
+    NSInteger tempSeq[256];
+}
+
+@property (nonatomic, retain) UITextField *textFieldSSID;
+@property (nonatomic, retain) UITextField *textFieldMAC;
+@property (nonatomic, retain) UITextField *textFieldPassword;
+@property (nonatomic, retain) NSArray *labelItems;
+@property (nonatomic, retain) NSArray *retryNumber;
+@property (strong, nonatomic) NSMutableArray *packetData;
+@property (strong, nonatomic) NSMutableArray *seqData;
+@property (nonatomic, copy) NSString *SSID;
+@property (nonatomic, copy) NSString *MAC;
+@property (nonatomic, copy) NSString *ipaddr;
+@property (nonatomic, copy) NSString *rc4Key;
+@property (nonatomic, copy) NSString *magicNumber;
+@property (nonatomic, copy) NSString *ackData;
+@property (nonatomic, readwrite) NSInteger cmdNumber;
+@property (nonatomic, readwrite) NSInteger testDataRetryNum;
+@property (nonatomic, assign) BOOL _isConnected;
+@property (nonatomic, assign) BOOL _isRunning;
+@property (nonatomic, assign) BOOL isTCP_ReciverOK;
+@property (nonatomic, assign) BOOL isUDP_ReciverOK;
+@property (nonatomic, retain) GCDAsyncUdpSocket *mUdpSocket;
+@property (nonatomic, retain) GCDAsyncUdpSocket *receive_UDP_Socket;
+@property (nonatomic, retain) GCDAsyncSocket *mSocket;
+@property (nonatomic, retain) GCDAsyncSocket *receive_TCP_Socket;
+@property (nonatomic, retain) NSThread* run_thread;
+@property (nonatomic, retain) NSTimer *timeout_timer;
+
+- (NSString *)getIPAddress;
+
+- (IBAction)send:(id)sender;
+- (IBAction)cancel:(id)sender;
+
+@end

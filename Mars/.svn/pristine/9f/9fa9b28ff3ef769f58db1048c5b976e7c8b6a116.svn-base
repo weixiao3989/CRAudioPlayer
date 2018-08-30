@@ -1,0 +1,40 @@
+//
+//  DeviceAlarmController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/11/7.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+
+@protocol DeviceAlarmDelegate;
+
+@interface DeviceAlarmController : UITableViewController <MyCameraDelegate> {
+    
+    MyCamera *camera;
+    NSMutableArray *labelItems;
+    NSInteger origValue;
+    NSInteger newValue;
+    
+    id<DeviceAlarmDelegate> delegate;
+}
+
+@property (nonatomic, retain) MyCamera *camera;
+@property (nonatomic, retain) NSMutableArray *labelItems;
+@property (nonatomic) NSInteger origValue;
+@property (nonatomic) NSInteger newValue;
+@property (nonatomic, assign) id<DeviceAlarmDelegate> delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<DeviceAlarmDelegate>)delegate;
+- (IBAction)back:(id)sender;
+
+@end
+
+@protocol DeviceAlarmDelegate
+
+- (void)didSetDeviceAlarm:(NSInteger)value;
+
+@end
+

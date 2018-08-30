@@ -1,0 +1,156 @@
+//
+//  CameraPickerController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/26.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "CameraPickerController.h"
+#import "AppDelegate.h"
+
+@implementation CameraPickerController
+
+@synthesize camera;
+@synthesize labelItems;
+@synthesize delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<CameraPickerDelegate>)delegate_ {
+    
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        self.delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (IBAction)done:(id)sender {
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+        
+    for (int i =0;i<=3;i++){
+        appDelegate->cameraChannel[i] = newValue[i];
+    }
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - View lifecycle
+
+- (void)viewDidLoad {
+    
+    
+    labelItems = [[NSArray alloc] initWithObjects:
+                  NSLocalizedString(@"Camera 1", @""),
+                  NSLocalizedString(@"Camera 2", @""),
+                  NSLocalizedString(@"Camera 3", @""),
+                  NSLocalizedString(@"Camera 4", @""), nil];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Cancel", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Done", @"") style:UIBarButtonItemStylePlain target:self action:@selector(done:)];
+    
+    
+    self.navigationItem.title = NSLocalizedString(@"Camera", @"");
+    
+    [super viewDidLoad];
+}
+
+- (void)viewDidUnload {
+    
+    self.delegate = nil;
+    self.labelItems = nil;
+    self.camera = nil;
+    [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    self.camera.delegate2 = self;
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    for (int i =0;i<=3;i++){
+        newValue[i] = appDelegate->cameraChannel[i];
+    }
+    
+    [super viewWillAppear:animated];
+}
+
+- (void)dealloc {
+    
+    self.delegate = nil;
+    [self.labelItems release];
+    [self.camera release];
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView
+ numberOfRowsInSection:(NSInteger)section {
+    return (section == 0) ? [self.labelItems count] : 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    static NSString *CameraPickerTableIdentifier = @"CameraPickerTableIdentifier";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:CameraPickerTableIdentifier];
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CameraPickerTableIdentifier]
+                autorelease];
+    }
+    [cell setAccessoryType:UITableViewCellAccessoryNone];
+    cell.textLabel.text = [labelItems objectAtIndex:row];
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    for (int i=0;i<=3;i++){
+        if (row == i && appDelegate->cameraChannel[i]==1) {
+            cell.accessoryType = UITableViewCellAccessoryCheckmark;
+        }
+    }
+    
+    return cell;
+}
+
+#pragma mark - TableView Delegate Methods
+- (void)tableView:(UITableView *)tableView
+didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+    
+    if (cell.accessoryType == UITableViewCellAccessoryCheckmark){
+        cell.accessoryType = UITableViewCellAccessoryNone;
+        newValue[row] = 0;
+    } else {
+        cell.accessoryType = UITableViewCellAccessoryCheckmark;
+        newValue[row] = 1;
+    }
+    
+    
+    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+@end

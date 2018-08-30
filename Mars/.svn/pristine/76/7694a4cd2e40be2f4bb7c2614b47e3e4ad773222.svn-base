@@ -1,0 +1,51 @@
+//
+//  SetRecScheduleController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/25.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#define SetRecSchedule_SECTION_INDEX 0
+#define DeleteRecSchedule_SECTION_INDEX 1
+
+#define CameraChannel_ROW_INDEX 0
+#define SearchFrom_ROW_INDEX 1
+#define SearchTo_ROW_INDEX 2
+#define SearchDay_ROW_INDEX 3
+#define MotionSwitch_ROW_INDEX 4
+
+#define DeleteSchedule_ROW_INDEX 0
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+#import "CameraPickerController.h"
+#import "DayPickerController.h"
+#import "SearchFromController.h"
+#import "SearchToController.h"
+
+@protocol SetRecScheduleDelegate;
+
+@interface SetRecScheduleController : UITableViewController<MyCameraDelegate,CameraPickerDelegate,DayPickerDelegate,SearchFromDelegate,SearchToDelegate,UIAlertViewDelegate> {
+    MyCamera *camera;
+    
+    id<SetRecScheduleDelegate> delegate;
+    
+    BOOL motionSwitch;
+    BOOL deleteSchedule;
+    int fromTime;
+    int toTime;
+}
+@property (nonatomic, assign) unsigned char CameraChannel;
+@property (nonatomic, retain) MyCamera *camera;
+@property (nonatomic, assign) id<SetRecScheduleDelegate> delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<SetRecScheduleDelegate>)delegate;
+
+@end
+
+
+@protocol SetRecScheduleDelegate
+
+
+@end

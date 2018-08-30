@@ -1,0 +1,129 @@
+//
+//  MarsCloud_Tools.h
+//  IOTCamViewer
+//
+//  Created by Chris on 2018/5/30.
+//  Copyright © 2018年 Mars. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#import <QuartzCore/QuartzCore.h>
+#import "AppDelegate.h"
+
+enum ToastShowLength
+{
+    TOAST_LENGTH_LONG,
+    TOAST_LENGTH_SHORT,
+};
+typedef enum ToastShowLength ToastShowLength;
+
+enum LogLevel
+{
+    ll_Debug,
+    ll_Normal,
+    ll_Info,
+    ll_Warning,
+    ll_Error,
+    ll_Serious,
+};
+typedef enum LogLevel LogLevel;
+
+
+/**
+ * MarsCloud_Tools 為 Tools 工具基礎.
+ * 凡類似於 Android MarsCloud Tools 工具類, 模仿其設置定義於此.
+ * 如: Tools Print, WaitDiaLog, Toast ...
+ **/
+@interface MarsCloud_Tools : NSObject
+
+/**
+ * Toast MakeText.
+ * 模仿 Android Toast Tools.
+ * 預設抓取 TopView.
+ * 參數一 : Title (顯示字串),
+ * 參數二 : Length (顯示時間長短, 長: 6.5 sec, 短: 3.5 sec).
+ **/
++ (void)showToastMessage:(NSString *)_message length:(ToastShowLength)_length;
+
+/**
+ * Toast MakeText.
+ * 模仿 Android Toast Tools.
+ * 參數一 : UIView (要顯示的畫面),
+ * 參數二 : Title (顯示字串),
+ * 參數三 : Length (顯示時間長短, 長: 6.5 sec, 短: 3.5 sec).
+ **/
++ (void)showToastMessage:(UIView *)_superview message:(NSString *)_message length:(ToastShowLength)_length;
+
+/**
+ * SendLogToRemote.
+ * 模仿 Android SendLog 到 Mars Server 上(遠端 Debug).
+ * 參數一 : LogLevel,
+ * 參數二 : NSString (要送出的 Text),
+ **/
++ (void)LogPrint:(LogLevel)_logLevel message:(NSString *)_message;
+
+@end
+
+
+/**
+ * WaitingDialogView.
+ **/
+@interface WaitingDialogView : UIView
+{
+
+}
+
+/**
+ * 顯示"等待中"的 DialogView(豎屏).
+ * 參數一 : NSString (顯示的字樣).
+ **/
++ (id)showWaitingDialogView_Portrait:(NSString *)title;
+
+/**
+ * 顯示"等待中"的 DialogView(豎屏).
+ * 參數一 : UIView (要顯示的畫面),
+ * 參數二 : NSString (顯示的字樣).
+ **/
++ (id)showWaitingDialogView_Portrait:(UIView *)_superview title:(NSString *)title;
+
+/**
+ * 顯示"等待中"的 DialogView(橫屏).
+ * 參數一 : NSString (顯示的字樣).
+ **/
++ (id)showWaitingDialogView_Landscape:(NSString *)title;
+
+/**
+ * 顯示"等待中"的 DialogView(橫屏).
+ * 參數一 : UIView (要顯示的畫面),
+ * 參數二 : NSString (顯示的字樣).
+ **/
++ (id)showWaitingDialogView_Landscape:(UIView *)_superview title:(NSString *)title;
+
+
+/**
+ * 檢查當前是否有"等待中"的 DialogView.
+ * 預設抓取 TopView.
+ **/
++ (BOOL)isShowWaitingDialogView;
+
+/**
+ * 檢查當前是否有"等待中"的 DialogView.
+ * 參數一 : UIView (要檢查的畫面).
+ **/
++ (BOOL)isShowWaitingDialogView:(UIView *)_superview;
+
+
+/**
+ * 關閉"等待中"的 DialogView.
+ * 預設抓取 TopView.
+ **/
++ (void)stopWaitingDialogView;
+
+/**
+ * 關閉"等待中"的 DialogView.
+ * 參數一 : UIView (要檢查的畫面).
+ **/
++ (void)stopWaitingDialogView:(UIView *)_superview;
+
+@end

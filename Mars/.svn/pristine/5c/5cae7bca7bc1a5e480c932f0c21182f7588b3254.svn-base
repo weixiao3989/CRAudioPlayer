@@ -1,0 +1,559 @@
+//
+//  MarsCloud_Tools.m
+//  IOTCamViewer
+//
+//  Created by Chris on 2018/5/30.
+//  Copyright © 2018年 Mars. All rights reserved.
+//
+
+#import "MarsCloud_Tools.h"
+
+@interface MarsCloud_Tools ()
+
+@end
+
+@implementation MarsCloud_Tools
+
+- (id)init
+{
+    self = [super init];
+    
+    if (self) {
+    
+    }
+    
+    return self;
+}
+
+/* Show Toast */
++ (void)showToastMessage:(NSString *)_message length:(ToastShowLength)_length
+{
+    UIWindow *topWindow = [[[UIApplication sharedApplication].windows sortedArrayUsingComparator:^NSComparisonResult(UIWindow *win1, UIWindow *win2) {
+        return win1.windowLevel - win2.windowLevel;
+    }] lastObject];
+    
+    UIView *topView = [[topWindow subviews] lastObject];
+    
+    // 製作 Windows & View.
+    UIWindow * window = [UIApplication sharedApplication].keyWindow;
+    UIView *showview = [[[UIView alloc] init] autorelease];
+    showview.backgroundColor = [UIColor blackColor];
+    showview.frame = CGRectMake(1, 1, 1, 1);
+    showview.alpha = 1.0f;
+    showview.layer.cornerRadius = 5.0f;
+    showview.layer.masksToBounds = YES;
+    [window addSubview:showview];
+    
+    // 製作 Label.
+    UILabel *label = [[[UILabel alloc] init] autorelease];
+    CGSize LabelSize = [_message sizeWithFont:[UIFont systemFontOfSize:17] constrainedToSize:CGSizeMake(290, 9000)lineBreakMode:NSLineBreakByWordWrapping];
+    label.numberOfLines = 0; // 自動換行.
+    label.frame = CGRectMake(10, 5, LabelSize.width, LabelSize.height);
+    label.text = _message;
+    label.textColor = [UIColor whiteColor];
+    label.textAlignment = 1;
+    label.backgroundColor = [UIColor clearColor];
+    label.font = [UIFont boldSystemFontOfSize:15];
+    [showview addSubview:label];
+    showview.frame = CGRectMake(([topView bounds].size.width - LabelSize.width - 20)/2, [topView bounds].size.height - 100, LabelSize.width+20, LabelSize.height+10);
+    
+    // 以最後參數(顯示時間長短), 決定 Show 出時間.
+    if (_length == TOAST_LENGTH_SHORT) {
+        [UIView animateWithDuration:3.5 animations:^{
+            showview.alpha = 0;
+        } completion:^(BOOL finished) {
+            [showview removeFromSuperview];
+        }];
+    } else if (_length == TOAST_LENGTH_LONG) {
+        [UIView animateWithDuration:6.5 animations:^{
+            showview.alpha = 0;
+        } completion:^(BOOL finished) {
+            [showview removeFromSuperview];
+        }];
+    }
+}
+
+
++ (void)showToastMessage:(UIView *)_superview message:(NSString *)_message length:(ToastShowLength)_length;
+{
+    // 製作 Windows & View.
+    UIWindow * window = [UIApplication sharedApplication].keyWindow;
+    UIView *showview = [[[UIView alloc] init] autorelease];
+    showview.backgroundColor = [UIColor blackColor];
+    showview.frame = CGRectMake(1, 1, 1, 1);
+    showview.alpha = 1.0f;
+    showview.layer.cornerRadius = 5.0f;
+    showview.layer.masksToBounds = YES;
+    [window addSubview:showview];
+    
+    // 製作 Label.
+    UILabel *label = [[[UILabel alloc] init] autorelease];
+    CGSize LabelSize = [_message sizeWithFont:[UIFont systemFontOfSize:17] constrainedToSize:CGSizeMake(290, 9000)lineBreakMode:NSLineBreakByWordWrapping];
+    label.numberOfLines = 0; // 自動換行.
+    label.frame = CGRectMake(10, 5, LabelSize.width, LabelSize.height);
+    label.text = _message;
+    label.textColor = [UIColor whiteColor];
+    label.textAlignment = 1;
+    label.backgroundColor = [UIColor clearColor];
+    label.font = [UIFont boldSystemFontOfSize:15];
+    [showview addSubview:label];
+    showview.frame = CGRectMake(([_superview bounds].size.width - LabelSize.width - 20)/2, [_superview bounds].size.height - 100, LabelSize.width+20, LabelSize.height+10);
+    
+    // 以最後參數(顯示時間長短), 決定 Show 出時間.
+    if (_length == TOAST_LENGTH_SHORT) {
+        [UIView animateWithDuration:3.5 animations:^{
+            showview.alpha = 0;
+        } completion:^(BOOL finished) {
+            [showview removeFromSuperview];
+        }];
+    } else if (_length == TOAST_LENGTH_LONG) {
+        [UIView animateWithDuration:6.5 animations:^{
+            showview.alpha = 0;
+        } completion:^(BOOL finished) {
+            [showview removeFromSuperview];
+        }];
+    }
+}
+
++ (void)LogPrint:(LogLevel)_logLevel message:(NSString *)_message
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSDate *now = [NSDate date];
+        NSDateFormatter *outputFormatter = [[NSDateFormatter alloc] init];
+        [outputFormatter setDateFormat:@"yyyy/MM/dd  HH:mm:ss"];
+        
+        NSString *newDateString = [outputFormatter stringFromDate:now];
+        NSString *time = [NSString stringWithFormat:@"["@"%@"@"]", newDateString];
+        NSString *_out = [[NSString alloc] init];
+        
+        switch (_logLevel)
+        {
+            case ll_Normal:
+                _out = [NSString stringWithFormat:@"%@"@" [Norm] "@"%@", time, _message];
+                NSLog(@"%@", _out);
+                break;
+                
+            case ll_Info:
+                _out = [NSString stringWithFormat:@"%@"@" [Info] "@"%@", time, _message];
+                NSLog(@"%@", _out);
+                break;
+                
+            case ll_Warning:
+                _out = [NSString stringWithFormat:@"%@"@" [Warning] "@"%@", time, _message];
+                NSLog(@"%@", _out);
+                break;
+                
+            case ll_Error:
+                _out = [NSString stringWithFormat:@"%@"@" [Error] "@"%@", time, _message];
+                NSLog(@"%@", _out);
+                break;
+                
+            case ll_Serious:
+                _out = [NSString stringWithFormat:@"%@"@" [Serious] "@"%@", time, _message];
+                NSLog(@"%@", _out);
+                break;
+                
+            default:
+                _out = [NSString stringWithFormat:@"%@"@" [Debug] "@"%@", time, _message];
+                NSLog(@"%@", _out);
+                break;
+        }
+        
+        
+        AppDelegate *appdelegate = (AppDelegate *)[UIApplication sharedApplication].delegate;
+        
+        if (appdelegate.UsingRemoteDebugger)
+        {
+            NSString *UUID = [[UIDevice currentDevice] identifierForVendor].UUIDString;
+            
+            NSString *UUID_last4String = [UUID substringWithRange:NSMakeRange(UUID.length-4,4)];
+            
+            NSString *_auth_token = [NSString stringWithFormat:@"Bearer %@", appdelegate.mars_token];
+            
+            NSString *urlString = [NSString stringWithFormat:@"https://www.mars-cloud.com/api/put?log&topic=log.app.%@", UUID_last4String];
+            
+            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:urlString]];
+            
+            NSString *msg = [NSString stringWithFormat:@"{\"logs\":[\"%@\"]}", _out];
+            
+            NSData* data = [msg dataUsingEncoding:NSUTF8StringEncoding];
+            
+            [request setValue:_auth_token forHTTPHeaderField:@"Authentication"];
+            [request setValue:@"false" forHTTPHeaderField:@"Keep-alive"];
+            [request setValue:@"close" forHTTPHeaderField:@"Connection"];
+            [request setValue:@"application/json; charset=UTF-8" forHTTPHeaderField:@"Content-Type"];
+            [request setHTTPMethod:@"POST"];
+            [request setHTTPBody:data];
+            
+            NSURLSession *session = [NSURLSession sharedSession];
+            NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                                    completionHandler:
+                                          ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                              
+                                              NSString *resp = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                                              NSLog(@"MarsCloud_Tools Send RemoteLog Http Resp is : %@", resp);
+                                              
+                                          }];
+            [task resume];
+        }
+        
+        [outputFormatter release];
+    });
+}
+
+@end
+
+//
+// NewPathWithRoundRect
+//
+// Creates a CGPathRect with a round rect of the given radius.
+//
+CGPathRef NewPathWithRoundRect(CGRect rect, CGFloat cornerRadius)
+{
+    //
+    // Create the boundary path
+    //
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPathMoveToPoint(path, NULL,
+                      rect.origin.x,
+                      rect.origin.y + rect.size.height - cornerRadius);
+    
+    // Top left corner
+    CGPathAddArcToPoint(path, NULL,
+                        rect.origin.x,
+                        rect.origin.y,
+                        rect.origin.x + rect.size.width,
+                        rect.origin.y,
+                        cornerRadius);
+    
+    // Top right corner
+    CGPathAddArcToPoint(path, NULL,
+                        rect.origin.x + rect.size.width,
+                        rect.origin.y,
+                        rect.origin.x + rect.size.width,
+                        rect.origin.y + rect.size.height,
+                        cornerRadius);
+    
+    // Bottom right corner
+    CGPathAddArcToPoint(path, NULL,
+                        rect.origin.x + rect.size.width,
+                        rect.origin.y + rect.size.height,
+                        rect.origin.x,
+                        rect.origin.y + rect.size.height,
+                        cornerRadius);
+    
+    // Bottom left corner
+    CGPathAddArcToPoint(path, NULL,
+                        rect.origin.x,
+                        rect.origin.y + rect.size.height,
+                        rect.origin.x,
+                        rect.origin.y,
+                        cornerRadius);
+    
+    // Close the path at the rounded rect
+    CGPathCloseSubpath(path);
+    
+    return path;
+}
+
+@implementation WaitingDialogView
+
+/* Show WaitDialogView (Portrait) */
++ (id)showWaitingDialogView_Portrait:(NSString *)title
+{
+    UIWindow *topWindow = [[[UIApplication sharedApplication].windows sortedArrayUsingComparator:^NSComparisonResult(UIWindow *win1, UIWindow *win2) {
+        return win1.windowLevel - win2.windowLevel;
+    }] lastObject];
+    
+    UIView *topView = [[topWindow subviews] lastObject];
+    
+    CGRect rect = CGRectMake([topView bounds].size.width / 4, [topView bounds].size.width / 1.5, [topView bounds].size.width / 2, [topView bounds].size.width / 2.5);
+    
+    WaitingDialogView *waitingDialogView = [[[WaitingDialogView alloc] initWithFrame:rect] autorelease];
+    
+    if (!waitingDialogView)
+    {
+        return nil;
+    }
+    
+    waitingDialogView.tag = 12; // 此處關鍵, 透過 Tag 判斷是否存在以及刪除基準.
+    waitingDialogView.opaque = NO;
+    waitingDialogView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [topView addSubview:waitingDialogView];
+    
+    const CGFloat DEFAULT_LABEL_WIDTH = 280.0;
+    const CGFloat DEFAULT_LABEL_HEIGHT = 50.0;
+    CGRect labelFrame = CGRectMake(0, 70, DEFAULT_LABEL_WIDTH, DEFAULT_LABEL_HEIGHT);
+    
+    UIActivityIndicatorView *activityIndicatorView = [[[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge] autorelease];
+    [waitingDialogView addSubview:activityIndicatorView];
+    
+    activityIndicatorView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    [activityIndicatorView startAnimating];
+    
+    UILabel *waitingLabel = [[[UILabel alloc] initWithFrame:labelFrame] autorelease];
+    waitingLabel.text = title;
+    waitingLabel.textColor = [UIColor whiteColor];
+    waitingLabel.backgroundColor = [UIColor clearColor];
+    waitingLabel.textAlignment = NSTextAlignmentCenter;
+    waitingLabel.font = [UIFont boldSystemFontOfSize:[UIFont labelFontSize]];
+    waitingLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    
+    [waitingDialogView addSubview:waitingLabel];
+    
+    CGRect activityIndicatorRect = activityIndicatorView.frame;
+    activityIndicatorRect.origin.x = 0.5 * (waitingDialogView.frame.size.width - activityIndicatorRect.size.width);
+    activityIndicatorRect.origin.y = waitingLabel.frame.origin.y - waitingLabel.frame.size.height;
+    activityIndicatorView.frame = activityIndicatorRect;
+    
+    CGFloat totalHeight = activityIndicatorView.frame.size.height + waitingLabel.frame.size.height;
+    labelFrame.origin.x = floor(0.5 * (waitingDialogView.frame.size.width - DEFAULT_LABEL_WIDTH));
+    labelFrame.origin.y = floor(0.5 * (waitingDialogView.frame.size.height + totalHeight - 80));
+    waitingLabel.frame = labelFrame;
+    
+    return waitingDialogView;
+}
+
++ (id)showWaitingDialogView_Portrait:(UIView *)_superview title:(NSString *)title;
+{
+    CGRect rect = CGRectMake([_superview bounds].size.width / 3.5, [_superview bounds].size.width / 2, [_superview bounds].size.width / 2, [_superview bounds].size.width / 2.5);
+    
+    WaitingDialogView *waitingDialogView = [[[WaitingDialogView alloc] initWithFrame:rect] autorelease];
+    
+    if (!waitingDialogView)
+    {
+        return nil;
+    }
+    
+    waitingDialogView.tag = 12; // 此處關鍵, 透過 Tag 判斷是否存在以及刪除基準.
+    waitingDialogView.opaque = NO;
+    waitingDialogView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [_superview addSubview:waitingDialogView];
+    
+    const CGFloat DEFAULT_LABEL_WIDTH = 280.0;
+    const CGFloat DEFAULT_LABEL_HEIGHT = 50.0;
+    CGRect labelFrame = CGRectMake(0, 70, DEFAULT_LABEL_WIDTH, DEFAULT_LABEL_HEIGHT);
+    
+    UIActivityIndicatorView *activityIndicatorView = [[[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge] autorelease];
+    [waitingDialogView addSubview:activityIndicatorView];
+    
+    activityIndicatorView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    [activityIndicatorView startAnimating];
+    
+    UILabel *waitingLabel = [[[UILabel alloc] initWithFrame:labelFrame] autorelease];
+    waitingLabel.text = title;
+    waitingLabel.textColor = [UIColor whiteColor];
+    waitingLabel.backgroundColor = [UIColor clearColor];
+    waitingLabel.textAlignment = NSTextAlignmentCenter;
+    waitingLabel.font = [UIFont boldSystemFontOfSize:[UIFont labelFontSize]];
+    waitingLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    
+    [waitingDialogView addSubview:waitingLabel];
+    
+    CGRect activityIndicatorRect = activityIndicatorView.frame;
+    activityIndicatorRect.origin.x = 0.5 * (waitingDialogView.frame.size.width - activityIndicatorRect.size.width);
+    activityIndicatorRect.origin.y = waitingLabel.frame.origin.y - waitingLabel.frame.size.height;
+    activityIndicatorView.frame = activityIndicatorRect;
+    
+    CGFloat totalHeight = activityIndicatorView.frame.size.height + waitingLabel.frame.size.height;
+    labelFrame.origin.x = floor(0.5 * (waitingDialogView.frame.size.width - DEFAULT_LABEL_WIDTH));
+    labelFrame.origin.y = floor(0.5 * (waitingDialogView.frame.size.height + totalHeight - 80));
+    waitingLabel.frame = labelFrame;
+    
+    return waitingDialogView;
+}
+
+/* Show WaitDialogView (Landscape) */
++ (id)showWaitingDialogView_Landscape:(NSString *)title
+{
+    UIWindow *topWindow = [[[UIApplication sharedApplication].windows sortedArrayUsingComparator:^NSComparisonResult(UIWindow *win1, UIWindow *win2) {
+        return win1.windowLevel - win2.windowLevel;
+    }] lastObject];
+    
+    UIView *topView = [[topWindow subviews] lastObject];
+    
+    CGRect rect = CGRectMake([topView bounds].size.width / 3.3, [topView bounds].size.width / 4.5, [topView bounds].size.width / 2.5, [topView bounds].size.width / 4);
+    
+    WaitingDialogView *waitingDialogView = [[[WaitingDialogView alloc] initWithFrame:rect] autorelease];
+    
+    if (!waitingDialogView)
+    {
+        return nil;
+    }
+    
+    waitingDialogView.tag = 12; // 此處關鍵, 透過 Tag 判斷是否存在以及刪除基準.
+    waitingDialogView.opaque = NO;
+    waitingDialogView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [topView addSubview:waitingDialogView];
+    
+    const CGFloat DEFAULT_LABEL_WIDTH = 280.0;
+    const CGFloat DEFAULT_LABEL_HEIGHT = 50.0;
+    CGRect labelFrame = CGRectMake(0, 70, DEFAULT_LABEL_WIDTH, DEFAULT_LABEL_HEIGHT);
+    
+    UIActivityIndicatorView *activityIndicatorView = [[[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge] autorelease];
+    [waitingDialogView addSubview:activityIndicatorView];
+    
+    activityIndicatorView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    [activityIndicatorView startAnimating];
+    
+    UILabel *waitingLabel = [[[UILabel alloc] initWithFrame:labelFrame] autorelease];
+    waitingLabel.text = title;
+    waitingLabel.textColor = [UIColor whiteColor];
+    waitingLabel.backgroundColor = [UIColor clearColor];
+    waitingLabel.textAlignment = NSTextAlignmentCenter;
+    waitingLabel.font = [UIFont boldSystemFontOfSize:[UIFont labelFontSize]];
+    waitingLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    
+    [waitingDialogView addSubview:waitingLabel];
+    
+    CGRect activityIndicatorRect = activityIndicatorView.frame;
+    activityIndicatorRect.origin.x = 0.5 * (waitingDialogView.frame.size.width - activityIndicatorRect.size.width);
+    activityIndicatorRect.origin.y = waitingLabel.frame.origin.y - waitingLabel.frame.size.height;
+    activityIndicatorView.frame = activityIndicatorRect;
+    
+    CGFloat totalHeight = activityIndicatorView.frame.size.height + waitingLabel.frame.size.height;
+    labelFrame.origin.x = floor(0.5 * (waitingDialogView.frame.size.width - DEFAULT_LABEL_WIDTH));
+    labelFrame.origin.y = floor(0.5 * (waitingDialogView.frame.size.height + totalHeight - 80));
+    waitingLabel.frame = labelFrame;
+    
+    return waitingDialogView;
+}
+
++ (id)showWaitingDialogView_Landscape:(UIView *)_superview title:(NSString *)title
+{
+    CGRect rect = CGRectMake([_superview bounds].size.width / 3.3, [_superview bounds].size.width / 4.5, [_superview bounds].size.width / 2.5, [_superview bounds].size.width / 4);
+    
+    WaitingDialogView *waitingDialogView = [[[WaitingDialogView alloc] initWithFrame:rect] autorelease];
+    
+    if (!waitingDialogView)
+    {
+        return nil;
+    }
+    
+    waitingDialogView.tag = 12; // 此處關鍵, 透過 Tag 判斷是否存在以及刪除基準.
+    waitingDialogView.opaque = NO;
+    waitingDialogView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [_superview addSubview:waitingDialogView];
+    
+    const CGFloat DEFAULT_LABEL_WIDTH = 280.0;
+    const CGFloat DEFAULT_LABEL_HEIGHT = 50.0;
+    CGRect labelFrame = CGRectMake(0, 70, DEFAULT_LABEL_WIDTH, DEFAULT_LABEL_HEIGHT);
+    
+    UIActivityIndicatorView *activityIndicatorView = [[[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge] autorelease];
+    [waitingDialogView addSubview:activityIndicatorView];
+    
+    activityIndicatorView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin |UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    [activityIndicatorView startAnimating];
+    
+    UILabel *waitingLabel = [[[UILabel alloc] initWithFrame:labelFrame] autorelease];
+    waitingLabel.text = title;
+    waitingLabel.textColor = [UIColor whiteColor];
+    waitingLabel.backgroundColor = [UIColor clearColor];
+    waitingLabel.textAlignment = NSTextAlignmentCenter;
+    waitingLabel.font = [UIFont boldSystemFontOfSize:[UIFont labelFontSize]];
+    waitingLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    
+    [waitingDialogView addSubview:waitingLabel];
+    
+    CGRect activityIndicatorRect = activityIndicatorView.frame;
+    activityIndicatorRect.origin.x = 0.5 * (waitingDialogView.frame.size.width - activityIndicatorRect.size.width);
+    activityIndicatorRect.origin.y = waitingLabel.frame.origin.y - waitingLabel.frame.size.height;
+    activityIndicatorView.frame = activityIndicatorRect;
+    
+    CGFloat totalHeight = activityIndicatorView.frame.size.height + waitingLabel.frame.size.height;
+    labelFrame.origin.x = floor(0.5 * (waitingDialogView.frame.size.width - DEFAULT_LABEL_WIDTH));
+    labelFrame.origin.y = floor(0.5 * (waitingDialogView.frame.size.height + totalHeight - 80));
+    waitingLabel.frame = labelFrame;
+    
+    return waitingDialogView;
+}
+
+/* Confirm whether currently is Show WaitDialogView */
++ (BOOL)isShowWaitingDialogView
+{
+    BOOL flag = FALSE;
+    
+    UIWindow *topWindow = [[[UIApplication sharedApplication].windows sortedArrayUsingComparator:^NSComparisonResult(UIWindow *win1, UIWindow *win2) {
+        return win1.windowLevel - win2.windowLevel;
+    }] lastObject];
+    
+    UIView *topView = [[topWindow subviews] lastObject];
+    
+    for (UIView *subview in topView.subviews)
+    {
+        if (subview.tag == 12) {
+            flag = TRUE;
+        }
+    }
+    return flag;
+}
+
+
++ (BOOL)isShowWaitingDialogView:(UIView *)_superview;
+{
+    BOOL flag = FALSE;
+    
+    for (UIView *subview in _superview.subviews)
+    {
+        if (subview.tag == 12) {
+            flag = TRUE;
+        }
+    }
+    return flag;
+}
+
+/* Close WaitDialogView */
++ (void)stopWaitingDialogView
+{
+    UIWindow *topWindow = [[[UIApplication sharedApplication].windows sortedArrayUsingComparator:^NSComparisonResult(UIWindow *win1, UIWindow *win2) {
+        return win1.windowLevel - win2.windowLevel;
+    }] lastObject];
+    
+    UIView *topView = [[topWindow subviews] lastObject];
+    
+    for (UIView *subview in topView.subviews)
+    {
+        if (subview.tag == 12) {
+            [subview removeFromSuperview];
+        }
+    }
+}
+
++ (void)stopWaitingDialogView:(UIView *)_superview;
+{
+    for (UIView *subview in _superview.subviews)
+    {
+        if (subview.tag == 12) {
+            [subview removeFromSuperview];
+        }
+    }
+}
+
+/* drawRect */
+- (void)drawRect:(CGRect)rect
+{
+    rect.size.height -= 1;
+    rect.size.width -= 1;
+    
+    const CGFloat RECT_PADDING = 8.0;
+    rect = CGRectInset(rect, RECT_PADDING, RECT_PADDING);
+    
+    const CGFloat ROUND_RECT_CORNER_RADIUS = 5.0;
+    CGPathRef roundRectPath = NewPathWithRoundRect(rect, ROUND_RECT_CORNER_RADIUS);
+    
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    const CGFloat BACKGROUND_OPACITY = 0.85;
+    CGContextSetRGBFillColor(context, 0, 0, 0, BACKGROUND_OPACITY);
+    CGContextAddPath(context, roundRectPath);
+    CGContextFillPath(context);
+    
+    const CGFloat STROKE_OPACITY = 0.25;
+    CGContextSetRGBStrokeColor(context, 1, 1, 1, STROKE_OPACITY);
+    CGContextAddPath(context, roundRectPath);
+    CGContextStrokePath(context);
+    
+    CGPathRelease(roundRectPath);
+}
+
+@end

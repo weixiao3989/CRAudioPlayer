@@ -1,0 +1,13 @@
+//
+//  UILandscapNavigationController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/26.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface UILandscapNavigationController : UINavigationController
+
+@end

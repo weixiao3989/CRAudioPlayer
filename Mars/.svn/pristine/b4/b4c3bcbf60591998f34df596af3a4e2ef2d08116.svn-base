@@ -1,0 +1,98 @@
+//
+//  CommonUI.h
+//  IOTCamViewer
+//
+//  Created by ossgo on 2014/12/15.
+//  Copyright (c) 2014年 TUTK. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+
+@interface CommonUI : NSObject{
+
+
+
+}
+
+// Singleton ----------------------------------------------------------
++(CommonUI*)shareInstance;
+
+
+
+//轉轉與黑幕(可帶文字) ----------------------------------------------------------
+//顯示轉轉與提示,提示可為空
+//-(void)showIndicatorWithTip:(NSString*)tipStr;
+
+//顯示轉轉與提示,提示可為空,幾秒後消失
+//-(void)showIndicatorWithTip:(NSString*)tipStr andRemoveAfterDelay:(NSInteger)delay finishBlock:(void(^)(void))finishBlock;
+
+//改變轉轉的提示
+//-(void)changeIndicatorTip:(NSString*)tipStr;
+
+//轉轉跟黑色半透明色片(廢棄)
++(UIView*)indicatorBlackViewWithTip:(NSString*)tipStr;
+
+//移除轉轉
+//-(void)removeIndicator;
+
+//立即移除轉轉
+//-(void)removeIndicatorImmediately;
+
+
+//顯示某個訊息,並在N秒後移除轉轉
+//-(void)removeIndicatorWithTip:(NSString*)tipStr afterDelay:(NSInteger)delay;
+
+//顯示某個訊息,並在N秒後移除轉轉 (有可能等待 N 秒後,消失後再做某件時間很長的事情,感覺已經退掉了,但卻在做finished內的事情,finishBlock內處理速度快的可以用這個)
+//-(void)removeIndicatorWithTip:(NSString*)tipStr afterDelay:(NSInteger)delay finishBlock:(void(^)(void))finishBlock;
+
+//取得最上層 Indicator
+//+(IndicatorWithBlackView*)getCurrentIndicatorWithBlackView;
+
+//Navigation ----------------------------------------------------------
+//更改背景
++(void)changeNavigationBG:(UINavigationController*)nc;
+
+//更改左上角按鈕為 箭頭 (back鍵)
++(void)changeNavigationBackBtnToArrow:(UIViewController*)vc btnTarget:(id)target actionSelector:(SEL)actionSelector;
+
+//導航列左上角的漢堡
++(void)changeNavigationBarBtnToHamburger:(UIViewController*)viewController actionSelector:(SEL)sel;
+
+//左上角按鈕改成取消
++(void)changeNavigationBarLeftBtnToCancel:(UIViewController*)vc actionSelector:(SEL)sel;
+
+//右上角按鈕
++(void)changeNavigationBarRightBtn:(UIViewController*)vc btnTitleName:(NSString*)btnTitleName actionSelector:(SEL)sel;
+
+//draw code ----------------------------------------------------------
+//畫個實心有顏色圈圈
++(UIImage *)drawCircleImageWithLengthside:(float)lengthSide circleRadius:(float)circleRadius fillColor:(UIColor*)fillColor;
+
+//畫一張有顏色的圖
++(UIImage *)imageWithColor:(UIColor *)color;
+
+//其他 ----------------------------------------------------------
+//取得目前螢幕高度（已根據ios8的調整）
++(CGSize)getScreenSize;
+
+//取的最上層的viewController
++(UIViewController *)appRootViewController;
+
+//最上層的VC是否有CustomAlertView
+//+(BOOL)isShowCustomAlertView;
+
+//最上層的VC是否有Indicator
+//+(BOOL)isShowIndicator;
+
+//取得最上層 CustomAlertView
+//+(CustomAlertView*)getCurrentCustomAlertView;
+
+//強制轉到直向
++(void)rotateToPortrait:(UIViewController*)vc;
+
+//圖片換size
++ (UIImage *)resizeImageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize;
+
+
+@end

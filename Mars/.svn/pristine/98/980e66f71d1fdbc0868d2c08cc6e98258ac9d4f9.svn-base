@@ -1,0 +1,61 @@
+//
+//  UILandscapNavigationController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/26.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "UILandscapNavigationController.h"
+
+@interface UILandscapNavigationController ()
+
+@end
+
+@implementation UILandscapNavigationController
+
+- (id)initWithRootViewController:(UIViewController *)rootViewController
+{
+    self = [super initWithRootViewController:rootViewController];
+    
+    if (self == nil) return nil;
+    
+    return self;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    return UIInterfaceOrientationMaskLandscape;
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
+{
+    BOOL autorotate = NO;
+    
+    switch (toInterfaceOrientation) {
+        case UIInterfaceOrientationLandscapeLeft:
+            autorotate = YES;
+            break;
+            
+        case UIInterfaceOrientationLandscapeRight:
+            autorotate = YES;
+            break;
+            
+        default:
+            break;
+    }
+    
+    return autorotate;
+}
+
+-(BOOL)shouldAutorotate
+{
+    return YES;
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation
+{
+    return UIInterfaceOrientationLandscapeLeft;
+}
+
+@end

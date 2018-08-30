@@ -1,0 +1,157 @@
+//
+//  BrightnessController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/11/5.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "BrightnessController.h"
+#import <IOTCamera/AVIOCTRLDEFs.h>
+
+@implementation BrightnessController
+
+@synthesize camera;
+@synthesize labelItems;
+@synthesize origValue;
+@synthesize newValue;
+@synthesize delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<BrightnessDelegate>)delegate_ {
+    
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        self.delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    
+    if (newValue != -1 && origValue != newValue) {
+        
+        SMsgAVIoctrlSetBrightnessReq *structSetBrightness = malloc(sizeof(SMsgAVIoctrlSetBrightnessReq));
+        memset(structSetBrightness, 0, sizeof(SMsgAVIoctrlSetBrightnessReq));
+        
+        structSetBrightness->channel = 0;
+        structSetBrightness->brightnessValue = (int)newValue;
+        
+        [camera sendIOCtrlToChannel:0
+                               Type:IOTYPE_USER_IPCAM_SET_BRIGHTNESS_REQ
+                               Data:(char *)structSetBrightness
+                           DataSize:sizeof(SMsgAVIoctrlSetBrightnessReq)];
+        
+        free(structSetBrightness);
+        
+        if (self.delegate) [self.delegate didSetCamBrightness:newValue];
+    }
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - View lifecycle
+
+- (void)viewDidLoad {
+    
+    labelItems = [[NSArray alloc] initWithObjects:NSLocalizedString(@"Brightness 1", @""),
+                  NSLocalizedString(@"Brightness 2", @""),
+                  NSLocalizedString(@"Brightness 3", @""),
+                  NSLocalizedString(@"Brightness 4", @""),
+                  NSLocalizedString(@"Brightness 5", @""),
+                  NSLocalizedString(@"Brightness 6", @""),nil];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Back", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    self.navigationItem.title = NSLocalizedString(@"Camera Brightness", @"");
+    
+    self.newValue = -1;
+    
+    [super viewDidLoad];
+}
+
+- (void)viewDidUnload {
+    
+    self.delegate = nil;
+    self.labelItems = nil;
+    self.camera = nil;
+    [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    self.camera.delegate2 = self;
+    [super viewWillAppear:animated];
+}
+
+- (void)dealloc {
+    
+    self.delegate = nil;
+    [self.labelItems release];
+    [self.camera release];
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView
+ numberOfRowsInSection:(NSInteger)section {
+    return (section == 0) ? [self.labelItems count] : 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    static NSString *BrightnessTableIdentifier = @"BrightnessTableIdentifier";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:BrightnessTableIdentifier];
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault reuseIdentifier:BrightnessTableIdentifier]
+                autorelease];
+    }
+    
+    cell.textLabel.text = [labelItems objectAtIndex:row];
+    cell.accessoryType = (row == self.origValue-1) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+    
+    
+    return cell;
+}
+
+#pragma mark - TableView Delegate Methods
+- (void)tableView:(UITableView *)tableView
+didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    for (UITableViewCell *cell in [self.tableView visibleCells])
+        cell.accessoryType = UITableViewCellAccessoryNone;
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+    cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    
+    self.newValue = [indexPath row]+1;
+    
+    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+#pragma mark - MyCameraDelegate Methods
+- (void)camera:(MyCamera *)camera_ _didReceiveIOCtrlWithType:(NSInteger)type Data:(const char *)data DataSize:(NSInteger)size {
+    
+    if (camera_ == camera && type == IOTYPE_USER_IPCAM_GET_BRIGHTNESS_RESP) {
+        
+        SMsgAVIoctrlGetBrightnessReq *s = (SMsgAVIoctrlGetBrightnessReq*)data;
+        memcpy(s, data, size);
+        self.origValue = s->brightnessValue;
+        
+        [self.tableView reloadData];
+    }
+}
+
+@end

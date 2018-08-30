@@ -1,0 +1,165 @@
+//
+//  RecordDurationController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/11/5.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "RecordDurationController.h"
+#import <IOTCamera/AVIOCTRLDEFs.h>
+
+@implementation RecordDurationController
+
+@synthesize camera;
+@synthesize labelItems;
+@synthesize origValue;
+@synthesize newValue;
+@synthesize delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<RecordDurationDelegate>)delegate_ {
+    
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        self.delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    
+    if (newValue != -1 && origValue != newValue) {
+        
+        SMsgAVIoctrlSetRecordingDurationReq *structSetRecDuration = malloc(sizeof(SMsgAVIoctrlSetRecordingDurationReq));
+        memset(structSetRecDuration, 0, sizeof(SMsgAVIoctrlSetRecordingDurationReq));
+        
+        structSetRecDuration->channel = 0;
+        structSetRecDuration->recordingDuration = (int)(newValue*5);
+        
+        
+//        if (newValue==0) {
+//            recDuration = @"5";
+//        } else if (newValue==1) {
+//            recDuration = @"10";
+//        } else if (newValue==2) {
+//            recDuration = @"15";
+//        }
+//    
+//        memcpy(structSetRecDuration->recordingDuration, [recDuration UTF8String], 4);
+        
+        [camera sendIOCtrlToChannel:0
+                               Type:IOTYPE_USER_IPCAM_SET_RECORDINGDURATION_REQ
+                               Data:(char *)structSetRecDuration
+                           DataSize:sizeof(SMsgAVIoctrlSetRecordingDurationReq)];
+        
+        free(structSetRecDuration);
+        
+        if (self.delegate) [self.delegate didSetRecordDuration:newValue];
+    }
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - View lifecycle
+
+- (void)viewDidLoad {
+    
+    labelItems = [[NSArray alloc] initWithObjects:NSLocalizedString(@" 5Min", @""),
+                  NSLocalizedString(@"10Min", @""),
+                  NSLocalizedString(@"15Min", @""), nil];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Back", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    self.navigationItem.title = NSLocalizedString(@"Record Duration", @"");
+    
+    self.newValue = -1;
+    
+    [super viewDidLoad];
+}
+
+- (void)viewDidUnload {
+    
+    self.delegate = nil;
+    self.labelItems = nil;
+    self.camera = nil;
+    [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    self.camera.delegate2 = self;
+    [super viewWillAppear:animated];
+}
+
+- (void)dealloc {
+    
+    self.delegate = nil;
+    [self.labelItems release];
+    [self.camera release];
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView
+ numberOfRowsInSection:(NSInteger)section {
+    return (section == 0) ? [self.labelItems count] : 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    static NSString *RecDurationTableIdentifier = @"RecDurationTableIdentifier";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:RecDurationTableIdentifier];
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault reuseIdentifier:RecDurationTableIdentifier]
+                autorelease];
+    }
+    
+    cell.textLabel.text = [labelItems objectAtIndex:row];
+    cell.accessoryType = (row == self.origValue/5-1) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+    
+    
+    return cell;
+}
+
+#pragma mark - TableView Delegate Methods
+- (void)tableView:(UITableView *)tableView
+didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    for (UITableViewCell *cell in [self.tableView visibleCells])
+        cell.accessoryType = UITableViewCellAccessoryNone;
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+    cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    
+    self.newValue = [indexPath row]+1;
+    
+    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+#pragma mark - MyCameraDelegate Methods
+- (void)camera:(MyCamera *)camera_ _didReceiveIOCtrlWithType:(NSInteger)type Data:(const char *)data DataSize:(NSInteger)size {
+    
+    if (camera_ == camera && type == IOTYPE_USER_IPCAM_SET_RECORDINGDURATION_RESP) {
+        
+        SMsgAVIoctrlGetRecordingDurationReq *s = (SMsgAVIoctrlGetRecordingDurationReq*)data;
+        memcpy(s, data, size);
+        self.origValue = s->recordingDuration;
+        
+        [self.tableView reloadData];
+    }
+}
+
+@end

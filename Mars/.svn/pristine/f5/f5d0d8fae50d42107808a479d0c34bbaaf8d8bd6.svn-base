@@ -1,0 +1,516 @@
+//
+//  PlayerControlPanel.m
+//
+//  Created by Eden Li on 2014/2/19.
+//  Copyright (c) 2014年 Darktt Personal Company. All rights reserved.
+//
+
+#import "PlayerControlPanel.h"
+#import "UIImage+DrawImage.h"
+
+#define kCurrentTimeLabelTag    201
+#define kTimeTrackBar           202
+#define kTotalTimeLabelTag      203
+
+#define kBackwardButtonTag      301
+#define kSpeedDownButtonTag     302
+#define kPlayButtonTag          303
+#define kSpeedUpButtonTag       304
+#define kFastForwardButtonTag   305
+#define kStopPlayButtonTag      306
+
+#define kNumberOfButton 2
+
+CG_INLINE CGPoint CGRectGetCenter(CGRect rect) {
+    return CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
+}
+
+@interface PlayerControlPanel ()
+{
+    id<PlayerControlPanelDelegate> _delegate;
+    
+    NSTimeInterval _maximumPlayTime;
+    NSTimeInterval _currentPlayedTime;
+    UIColor *_textTintColor;
+    UIButton *playPauseButton;
+    
+    BOOL _playing;
+}
+
+@end
+
+@implementation PlayerControlPanel
+
+#pragma mark - Class Methods
+
++ (CGFloat)panelHeight
+{
+    //return 100.0f;
+    return 80.0f;
+}
+
++ (instancetype)controlPanelWithFrame:(CGRect)frame setwinSize:(CGSize)wSize delegate:(id<PlayerControlPanelDelegate>)delegate
+{
+    PlayerControlPanel *controlPanel = [[PlayerControlPanel alloc] initWithFrame:frame  setwinSize:wSize delegate:delegate];
+    
+    return [controlPanel autorelease];
+}
+
++ (PlayerControlPanel *)controlPanelInView:(UIView *)superview tag:(NSUInteger)tag
+{
+    PlayerControlPanel *controlPanel = (PlayerControlPanel *)[superview viewWithTag:tag];
+    
+    if (![controlPanel isKindOfClass:[PlayerControlPanel class]]) {
+#ifdef DEBUG
+        
+        NSLog(@"%s [%d] : ControlPanel not found.", __func__, __LINE__);
+        
+#endif
+        return nil;
+    }
+    
+    return controlPanel;
+}
+
+#pragma mark - Instace Methods
+
+- (id)initWithFrame:(CGRect)frame setwinSize:(CGSize)wSize  delegate:(id<PlayerControlPanelDelegate>)delegate
+{
+    //MARK: Reset self size.
+    //CGSize winsize = [self winSize];
+    CGSize winsize = wSize;
+    
+    frame.size = CGSizeMake(winsize.width, [PlayerControlPanel panelHeight]);
+    
+    self = [super initWithFrame:frame];
+    if (self == nil) return nil;
+    
+    //UIColor *backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"PanelBG"]];
+    UIColor *backgroundColor = [UIColor whiteColor];
+                                
+    [self setBackgroundColor:backgroundColor];
+    [self setAutoresizesSubviews:YES];
+    [self setClipsToBounds:YES];
+    
+    _delegate = delegate;
+    _textTintColor = [UIColor whiteColor];
+    _playing = YES;
+    
+    [self loadViews];
+    
+    return self;
+}
+
+- (void)dealloc
+{
+    [_textTintColor release];
+    
+    [super dealloc];
+}
+
+#pragma mark - Override Property
+
+- (void)setMaximumPlayTime:(NSUInteger)maximumPlayTime
+{
+    _maximumPlayTime = maximumPlayTime / 1000;
+    NSString *maximumTime = [self convertTimeIntervalToString:_maximumPlayTime];
+    
+    UILabel *totalTimeLabel = [self labelInView:self withTag:kTotalTimeLabelTag];
+    [totalTimeLabel setText:maximumTime];
+    
+    [self updateLabel:totalTimeLabel];
+    
+    UISlider *trackBar = [self sliderInView:self withTag:kTimeTrackBar];
+    [trackBar setMaximumValue:maximumPlayTime];
+}
+
+- (NSUInteger)maximumPlayTime
+{
+    return _maximumPlayTime;
+}
+
+/*
+- (void)setwinSize:(CGSize) wSize
+{
+    _winSize = wSize;
+}
+*/
+
+- (void)setCurrentPlayedTime:(NSTimeInterval)currentPlayedTime
+{
+    _currentPlayedTime = currentPlayedTime;
+    
+    //NSString *playedTime = [self convertTimeIntervalToString:currentPlayedTime];
+    
+    NSString *playedTime;
+    
+    if (currentPlayedTime>=3600000){
+        playedTime = [NSString stringWithFormat:@"%02li:%02li:%02li",
+                      lround(floor(currentPlayedTime / 3600000)) % 24,
+                      lround(floor(currentPlayedTime / 60000)) % 60,
+                      lround(floor(currentPlayedTime / 1000)) %60];
+    } else {
+        playedTime = [NSString stringWithFormat:@"%02li:%02li",
+                      lround(floor(currentPlayedTime / 60000)) % 60,
+                      lround(floor(currentPlayedTime / 1000)) %60];
+    }
+    
+    UILabel *currentTimeLabel = [self labelInView:self withTag:kCurrentTimeLabelTag];
+    [currentTimeLabel setText:playedTime];
+    
+    [self updateLabel:currentTimeLabel];
+    
+    UISlider *trackBar = [self sliderInView:self withTag:kTimeTrackBar];
+    [trackBar setValue:currentPlayedTime];
+}
+
+- (NSTimeInterval)currentPlayedTime
+{
+    return _currentPlayedTime;
+}
+
+- (void)setTextTintColor:(UIColor *)textTintColor
+{
+    [_textTintColor release];
+    _textTintColor = [textTintColor retain];
+    
+    UILabel *currentTimeLabel = [self labelInView:self withTag:kCurrentTimeLabelTag];
+    [currentTimeLabel setTextColor:textTintColor];
+    
+    UILabel *totalTimeLabel = [self labelInView:self withTag:kTotalTimeLabelTag];
+    [totalTimeLabel setTextColor:textTintColor];
+}
+
+- (UIColor *)textTintColor
+{
+    return _textTintColor;
+}
+
+- (BOOL)isPlaying
+{
+    return _playing;
+}
+
+#pragma mark - UI Setting
+
+- (void)changeImgToPlay {
+    
+    _playing = NO;
+    [playPauseButton setBackgroundImage:[UIImage imageNamed:@"play-icon-110x110.png"] forState:UIControlStateNormal];
+    [playPauseButton setBackgroundImage:[UIImage imageNamed:@"play-icon-110x110.png"] forState:UIControlStateHighlighted];
+}
+
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+}
+
+- (void)loadViews
+{
+    /* Top Level */
+    CGRect topLevelRect = CGRectMake(0.0f, CGRectGetMinY(self.bounds), CGRectGetWidth(self.frame), CGRectGetHeight(self.frame) / 2.0f);
+    CGRect labelArea = CGRectMake(0.0f, 0.0f, 80.0f, CGRectGetHeight(topLevelRect));
+    CGRect sliderArea = CGRectMake(CGRectGetMaxX(labelArea), 0.0f, 0.0f, CGRectGetHeight(topLevelRect));
+    sliderArea.size.width = CGRectGetWidth(topLevelRect) - CGRectGetWidth(labelArea) * 2;
+    
+    // Current Played Time
+    UILabel *currentTimelabel = [self defaultLabelWithFrame:CGRectZero];
+    [currentTimelabel setCenter:CGRectGetCenter(labelArea)];
+    [currentTimelabel setTag:kCurrentTimeLabelTag];
+    [currentTimelabel setAutoresizingMask:UIViewAutoresizingFlexibleRightMargin];
+    
+    [self addSubview:currentTimelabel];
+    
+    // Time Track Bar
+    UISlider *trackBar = [self defaultSliderWithFrame:CGRectMake(0.0f, 0.0f, CGRectGetWidth(sliderArea), 10.0f)];
+    [trackBar setCenter:CGRectGetCenter(sliderArea)];
+    [trackBar setTag:kTimeTrackBar];
+    [trackBar setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
+    [trackBar addTarget:self action:@selector(seekToTime:) forControlEvents:UIControlEventValueChanged];
+    
+    [self addSubview:trackBar];
+    
+    // Total Time Label
+    labelArea.origin.x += CGRectGetMaxX(sliderArea);
+    
+    UILabel *totalTimeLabel = [self defaultLabelWithFrame:CGRectZero];
+    [totalTimeLabel setCenter:CGRectGetCenter(labelArea)];
+    [totalTimeLabel setTag:kTotalTimeLabelTag];
+    [totalTimeLabel setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin];
+    
+    [self addSubview:totalTimeLabel];
+    
+    /* Bottom Level */
+    CGRect bottomLevelRect = CGRectMake(0.0f, CGRectGetMidY(self.bounds), CGRectGetWidth(self.frame), CGRectGetHeight(self.frame) / 2);
+    //CGRect buttonRect = CGRectMake(78.5f, CGRectGetMidY(self.bounds) + 4.0f, CGRectGetWidth(bottomLevelRect) / kNumberOfButton, CGRectGetHeight(bottomLevelRect));
+    CGRect buttonRect = CGRectMake(78.5f, CGRectGetMidY(self.bounds) -20, CGRectGetWidth(bottomLevelRect) / kNumberOfButton, CGRectGetHeight(bottomLevelRect));
+
+    CGFloat buttonWidth = 110.0f;
+    CGFloat buttonHeight = 110.0f;
+    
+    // Reward
+    UIButton *rewardButton = [self defaultButtonWithFrame:CGRectMake(0.0f, 0.0f, buttonWidth, buttonHeight)];
+    [rewardButton setCenter:CGRectGetCenter(buttonRect)];
+    [rewardButton setTag:kBackwardButtonTag];
+    [rewardButton setTitle:@"RW" forState:UIControlStateNormal];
+//    [rewardButton setBackgroundImage:nil forState:UIControlStateNormal];
+    
+//    [self addSubview:rewardButton];
+    
+    // Speed Down
+//    buttonRect.origin.x += CGRectGetWidth(buttonRect);
+    
+    UIButton *speedDownButton = [self defaultButtonWithFrame:CGRectMake(0.0f, 0.0f, buttonWidth, buttonHeight)];
+    [speedDownButton setCenter:CGRectGetCenter(buttonRect)];
+    [speedDownButton setTag:kSpeedDownButtonTag];
+    [speedDownButton setTitle:@"-" forState:UIControlStateNormal];
+//    [speedDownButton setBackgroundImage:nil forState:UIControlStateNormal];
+    
+//    [self addSubview:speedDownButton];
+    
+    // Play / Pause
+//    buttonRect.origin.x += CGRectGetWidth(buttonRect);
+    
+    playPauseButton = [self defaultButtonWithFrame:CGRectMake(0.0f, 0.0f, buttonWidth, buttonHeight)];
+    [playPauseButton setCenter:CGRectGetCenter(buttonRect)];
+    [playPauseButton setTag:kPlayButtonTag];
+
+    [playPauseButton setBackgroundImage:[UIImage imageNamed:@"pause-icon-110x110.png"] forState:UIControlStateNormal];
+    [playPauseButton setBackgroundImage:[UIImage imageNamed:@"pause-icon-110x110.png"] forState:UIControlStateHighlighted];
+    
+
+    [self addSubview:playPauseButton];
+    
+    // Speed Up
+//    buttonRect.origin.x += CGRectGetWidth(buttonRect);
+    
+    UIButton *speedUpButton = [self defaultButtonWithFrame:CGRectMake(0.0f, 0.0f, buttonWidth, buttonHeight)];
+    [speedUpButton setCenter:CGRectGetCenter(buttonRect)];
+    [speedUpButton setTag:kSpeedUpButtonTag];
+    [speedUpButton setTitle:@"+" forState:UIControlStateNormal];
+//    [speedUpButton setBackgroundImage:nil forState:UIControlStateNormal];
+    
+//    [self addSubview:speedUpButton];
+    
+    // Fast Forward
+//    buttonRect.origin.x += CGRectGetWidth(buttonRect);
+    
+    UIButton *ffButton = [self defaultButtonWithFrame:CGRectMake(0.0f, 0.0f, buttonWidth, buttonHeight)];
+    [ffButton setCenter:CGRectGetCenter(buttonRect)];
+    [ffButton setTag:kFastForwardButtonTag];
+    [ffButton setTitle:@"FF" forState:UIControlStateNormal];
+//    [ffButton setBackgroundImage:nil forState:UIControlStateNormal];
+    
+//    [self addSubview:ffButton];
+    
+    // Stop Play
+    buttonRect.origin.x += CGRectGetWidth(buttonRect);
+    
+    UIButton *stopButton = [self defaultButtonWithFrame:CGRectMake(0.0f, 0.0f, buttonWidth, buttonHeight)];
+    [stopButton setCenter:CGRectGetCenter(buttonRect)];
+    [stopButton setTag:kStopPlayButtonTag];
+    [stopButton setBackgroundImage:[UIImage imageNamed:@"StopBtn.png"] forState:UIControlStateNormal];
+    [stopButton setBackgroundImage:[UIImage imageNamed:@"StopBtnPress.png"] forState:UIControlStateHighlighted];
+    
+    //[self addSubview:stopButton];
+}
+
+- (CGSize)winSize
+{
+    CGRect screenRect = [[UIScreen mainScreen] bounds];
+    CGFloat width = CGRectGetWidth(screenRect);
+    CGFloat height = CGRectGetHeight(screenRect);
+    UIInterfaceOrientation interfaceOrientation = [[UIApplication sharedApplication] statusBarOrientation];
+    
+    CGSize winSize = CGSizeZero;
+    
+    
+    if(UIInterfaceOrientationIsPortrait(interfaceOrientation)){
+        winSize = CGSizeMake(width, height);
+    } else if(UIInterfaceOrientationIsLandscape(interfaceOrientation)){
+        winSize = CGSizeMake(height, width);
+    }
+    
+    //winSize = CGSizeMake(width, height);
+    
+    return winSize;
+}
+
+#pragma mark Label Methods
+
+- (UILabel *)defaultLabelWithFrame:(CGRect)frame
+{
+    UILabel *label = [[UILabel alloc] initWithFrame:frame];
+    [label setText:@"00:00"];
+    [label setTextColor:_textTintColor];
+    [label setFont:[UIFont systemFontOfSize:13.0f]];
+    [label setBackgroundColor:[UIColor clearColor]];
+    
+    return [label autorelease];
+}
+
+- (UILabel *)labelInView:(UIView *)superview withTag:(NSInteger)tag
+{
+    UILabel *label = (UILabel *)[superview viewWithTag:tag];
+    
+    if (![label isKindOfClass:[UILabel class]]) {
+#ifdef DEBUG
+        
+        NSLog(@"%s [%d] : Label not found.", __func__, __LINE__);
+        
+#endif
+        return nil;
+    }
+    
+    return label;
+}
+
+- (void)updateLabel:(UILabel *)label
+{
+    CGPoint center = CGRectGetCenter(label.frame);
+    
+    [label sizeToFit];
+    [label setCenter:center];
+}
+
+#pragma mark Slider Methods
+
+- (UISlider *)defaultSliderWithFrame:(CGRect)frame
+{
+    UISlider *slider = [[UISlider alloc] initWithFrame:frame];
+    [slider setUserInteractionEnabled:NO];
+    [slider setMinimumTrackTintColor:[UIColor whiteColor]];
+    [slider setMaximumTrackTintColor:[UIColor lightGrayColor]];
+    
+    [slider setThumbImage:[UIImage imageNamed:@"SliderThumbImage.png"] forState:UIControlStateNormal];
+    
+    UIImage *minimumTrackImage = [UIImage imageWithColor:[UIColor colorWithRed:17/255.0f green:118/255.0f blue:191/255.0f alpha:1.0f] size:CGSizeMake(1.0f, 2.0f)];
+    UIImage *maximumTrackImage = [UIImage imageWithColor:[UIColor lightGrayColor] size:CGSizeMake(1.0f, 2.0f)];
+    
+    [slider setMinimumTrackImage:minimumTrackImage forState:UIControlStateNormal];
+    [slider setMaximumTrackImage:maximumTrackImage forState:UIControlStateNormal];
+    
+    return [slider autorelease];
+}
+
+- (UISlider *)sliderInView:(UIView *)superview withTag:(NSInteger)tag
+{
+    UISlider *slider = (UISlider *)[superview viewWithTag:tag];
+    
+    if (![slider isKindOfClass:[UISlider class]]) {
+#ifdef DEBUG
+        
+        NSLog(@"%s [%d] : Slider not found.", __func__, __LINE__);
+        
+#endif
+        return nil;
+    }
+    
+    return slider;
+}
+
+#pragma mark Button Methods
+
+- (UIButton *)defaultButtonWithFrame:(CGRect)frame
+{
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    [button setFrame:frame];
+    [button addTarget:self action:@selector(controlButtonAction:) forControlEvents:UIControlEventTouchUpInside];
+    
+    return button;
+}
+
+- (UIButton *)buttonInView:(UIView *)superview withTag:(NSInteger)tag
+{
+    UIButton *button = (UIButton *)[superview viewWithTag:tag];
+    
+    if (![button isKindOfClass:[UIButton class]]) {
+#ifdef DEBUG
+        
+        NSLog(@"%s [%d] : Button not found.", __func__, __LINE__);
+        
+#endif
+        return nil;
+    }
+    
+    return button;
+}
+
+#pragma mark - Button Actions
+
+- (IBAction)controlButtonAction:(UIButton *)sender
+{
+    ControlButtonIndex buttonIndex = sender.tag - 301;
+    
+    if (buttonIndex == ControlButtonIndexPlayPause) {
+        
+        if (_playing) {
+            [sender setBackgroundImage:[UIImage imageNamed:@"play-icon-110x110.png"] forState:UIControlStateNormal];
+            [sender setBackgroundImage:[UIImage imageNamed:@"play-icon-110x110.png"] forState:UIControlStateHighlighted];
+        } else {
+            [sender setBackgroundImage:[UIImage imageNamed:@"pause-icon-110x110.png"] forState:UIControlStateNormal];
+            [sender setBackgroundImage:[UIImage imageNamed:@"pause-icon-110x110.png"] forState:UIControlStateHighlighted];
+        }
+        
+        _playing = !_playing;
+    }
+    
+    if (buttonIndex == ControlButtonIndexStopPlay) {
+        if (!_playing) {
+            return;
+        }
+        
+        _playing = NO;
+        
+        UIButton *playButton = [self buttonInView:self withTag:kPlayButtonTag];
+        [playButton setBackgroundImage:[UIImage imageNamed:@"play-icon-110x110.png"] forState:UIControlStateNormal];
+        [playButton setBackgroundImage:[UIImage imageNamed:@"play-icon-110x110.png"] forState:UIControlStateHighlighted];
+    }
+    
+    if (_delegate != nil && [_delegate respondsToSelector:@selector(controlPanel:clickedControlButtonAtIndex:)]) {
+        [_delegate controlPanel:self clickedControlButtonAtIndex:buttonIndex];
+    }
+}
+//pause-icon-110x110.png
+//play-icon-110x110.png
+#pragma mark - Slider Action
+
+- (IBAction)seekToTime:(UISlider *)sender
+{
+    _currentPlayedTime = sender.value;
+    
+    NSString *playedTime = [self convertTimeIntervalToString:_currentPlayedTime];
+    
+    UILabel *currentTimeLabel = [self labelInView:self withTag:kCurrentTimeLabelTag];
+    [currentTimeLabel setText:playedTime];
+    
+    [self updateLabel:currentTimeLabel];
+    
+    if (_delegate != nil && [_delegate respondsToSelector:@selector(controlPanel:didSeekToTime:)]) {
+        [_delegate controlPanel:self didSeekToTime:_currentPlayedTime];
+    }
+}
+
+#pragma mark - Other Methods
+
+- (NSString *)convertTimeIntervalToString:(NSTimeInterval)timeInterval
+{
+    NSDate *convertTime = [NSDate dateWithTimeIntervalSince1970:timeInterval];
+    
+    NSString *dateFormatter = [NSString string];
+    
+    if (timeInterval < 3600) {
+        dateFormatter = @"mm:ss";
+    } else if (3600 <= timeInterval) {
+        dateFormatter = @"HH:mm:ss";
+    }
+    
+    NSDateFormatter *formatter = [[NSDateFormatter new] autorelease];
+    [formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+    [formatter setDateFormat:dateFormatter];
+    
+    return [formatter stringFromDate:convertTime];
+}
+
+@end

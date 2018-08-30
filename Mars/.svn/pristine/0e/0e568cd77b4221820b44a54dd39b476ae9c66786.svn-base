@@ -1,0 +1,519 @@
+//
+//  SetRecScheduleController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/25.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "SetRecScheduleController.h"
+#import "AppDelegate.h"
+
+@interface SetRecScheduleController ()
+
+@end
+
+@implementation SetRecScheduleController
+
+@synthesize delegate;
+@synthesize camera;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<SetRecScheduleDelegate>)delegate_ {
+    
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (IBAction)done:(id)sender
+{
+    if (![self checkAllValueSet]) {
+        return;
+    }
+    
+    [self setSchedule];
+}
+
+- (void)setSchedule {
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    SMsgAVIoctrlSetScheduleSettingReq *structSetSchedule = malloc(sizeof(SMsgAVIoctrlSetScheduleSettingReq));
+    memset(structSetSchedule, 0, sizeof(SMsgAVIoctrlSetScheduleSettingReq));
+    
+    
+    for (int i=0;i<=3;i++) {
+        structSetSchedule->channel[i] = appDelegate->cameraChannel[i];
+        //NSLog(@"channel:%d",structSetSchedule->channel[i]);
+    }
+    
+    for (int i=0;i<=6;i++) {
+        structSetSchedule->week[i] = appDelegate->chooseDay[i];
+        //NSLog(@"day:%d",structSetSchedule->week[i]);
+    }
+    
+    if (motionSwitch == YES) {
+        structSetSchedule->isSet = 2;
+    } else {
+        structSetSchedule->isSet = 1;
+    }
+    
+    //NSLog(@"set:%d",structSetSchedule->isSet);
+    
+    for (int i=0;i<=23;i++){
+        structSetSchedule->hour[i] = 0;
+    }
+        
+    for (int i = (int)appDelegate->fromTime; i<=appDelegate->toTime;i++){
+        structSetSchedule->hour[i] = 1;
+    }
+    
+    [camera sendIOCtrlToChannel:0
+                           Type:IOTYPE_USER_IPCAM_SET_SCHEDULESETTING_REQ
+                           Data:(char *)structSetSchedule
+                       DataSize:sizeof(SMsgAVIoctrlSetScheduleSettingReq)];
+    
+    free(structSetSchedule);
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)deleteSchedule
+{
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    SMsgAVIoctrlSetScheduleSettingReq *structSetSchedule = malloc(sizeof(SMsgAVIoctrlSetScheduleSettingReq));
+    memset(structSetSchedule, 0, sizeof(SMsgAVIoctrlSetScheduleSettingReq));
+    
+    for (int i=0;i<=3;i++) {
+        structSetSchedule->channel[i] = appDelegate->cameraChannel[i];
+    }
+    
+    for (int i=0;i<=6;i++) {
+        structSetSchedule->week[i] = appDelegate->chooseDay[i];
+    }
+    
+    structSetSchedule->isSet = 0;
+    
+    if (appDelegate->fromTime < appDelegate->toTime) {
+        
+        for (int i=0;i<=23;i++){
+            structSetSchedule->hour[i] = 0;
+        }
+        
+        for (int i = (int)appDelegate->fromTime; i <= appDelegate->toTime;i++){
+            structSetSchedule->hour[i] = 1;
+        }
+    }
+    
+    [camera sendIOCtrlToChannel:0
+                           Type:IOTYPE_USER_IPCAM_SET_SCHEDULESETTING_REQ
+                           Data:(char *)structSetSchedule
+                       DataSize:sizeof(SMsgAVIoctrlSetScheduleSettingReq)];
+    
+    free(structSetSchedule);
+    
+    deleteSchedule = YES;
+    
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"", @"") message:NSLocalizedString(@"Delete success!", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"OK", @"") otherButtonTitles:nil];
+//    [alert show];
+    [alert release];
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    [self.tableView reloadData];
+    
+    [super viewDidAppear:YES];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    deleteSchedule = NO;
+    motionSwitch = NO;
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    appDelegate->fromTime = -1;
+    appDelegate->toTime = -1;
+    
+    for (int i=0;i<=3;i++) {
+        appDelegate->cameraChannel[i] = 0;
+    }
+    
+    for (int i=0;i<=6;i++) {
+        appDelegate->chooseDay[i] = 0;
+    }
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Cancel", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Add", @"") style:UIBarButtonItemStylePlain target:self action:@selector(done:)];
+
+	self.navigationItem.title = NSLocalizedString(@"Set REC Schedule", @"");
+}
+
+- (BOOL)checkAllValueSet
+{
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    if (appDelegate->cameraChannel[0]==0 && appDelegate->cameraChannel[1]==0 && appDelegate->cameraChannel[2]==0 && appDelegate->cameraChannel[3]==0){
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"", @"") message:NSLocalizedString(@"Please select a camera.", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"OK", @"") otherButtonTitles:nil];
+        [alert show];
+        [alert release];
+        
+        return NO;
+    }
+    
+    if (appDelegate->chooseDay[0]==0 && appDelegate->chooseDay[1]==0 && appDelegate->chooseDay[2]==0 && appDelegate->chooseDay[3]==0 && appDelegate->chooseDay[4]==0 && appDelegate->chooseDay[5]==0 && appDelegate->chooseDay[6]==0) {
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"", @"") message:NSLocalizedString(@"Please choose day of week.", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"OK", @"") otherButtonTitles:nil];
+        [alert show];
+        [alert release];
+        
+        return NO;
+    }
+    
+    NSInteger _fromTime = appDelegate->fromTime;
+    NSInteger _toTime = appDelegate->toTime;
+    
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"", @"") message:nil delegate:self cancelButtonTitle:NSLocalizedString(@"OK", @"") otherButtonTitles:nil];
+    
+    if (_fromTime == -1) {
+        [alert setMessage:NSLocalizedString(@"Please set start time.", @"")];
+        
+        [alert show];
+        [alert release];
+        
+        return NO;
+    }
+    
+    if (_toTime == -1) {
+        [alert setMessage:NSLocalizedString(@"Please set end time.", @"")];
+        
+        [alert show];
+        [alert release];
+        
+        return NO;
+    }
+    
+    if ( (_fromTime - 1) == _toTime) {
+        [alert setMessage:NSLocalizedString(@"The start time and end time can not be the same.", @"")];
+        
+        [alert show];
+        [alert release];
+        
+        return NO;
+    }
+    
+    if (_fromTime > _toTime) {
+        [alert setMessage:NSLocalizedString(@"The end time can not earlier than the start time.", @"")];
+        
+        [alert show];
+        [alert release];
+        
+        return NO;
+    }
+    
+    [alert release];
+    
+    return YES;
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 2;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    if (section == SetRecSchedule_SECTION_INDEX){
+        return 5;
+    } else if (section == DeleteRecSchedule_SECTION_INDEX){
+        return 1;
+    } else return 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *SectionTableIdentifier = @"SectionTableIdentifier";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:SectionTableIdentifier];
+    
+    NSUInteger section = [indexPath section];
+    NSUInteger row = [indexPath row];
+    
+    NSString *CameraString;
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:SectionTableIdentifier]
+                autorelease];
+    }
+    
+    if (section == SetRecSchedule_SECTION_INDEX) {
+        
+        if (row == CameraChannel_ROW_INDEX) {
+            
+            cell.textLabel.text = NSLocalizedString(@"Camera", @"");
+            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            
+            CameraString = @"";
+            
+            for (int i=0;i<=3;i++){
+                if (appDelegate->cameraChannel[i]!=0) {
+                    CameraString = [CameraString stringByAppendingFormat:@" %d",i+1];
+                }
+            }
+            
+            cell.detailTextLabel.text = CameraString;
+            
+        } else if (row == SearchFrom_ROW_INDEX) {
+            
+            cell.textLabel.text = NSLocalizedString(@"From", @"");
+            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            
+            CameraString = @"";
+            
+            if (appDelegate->fromTime == 0) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"00:00", @"")];
+            } else if (appDelegate->fromTime == 1) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"01:00", @"")];
+            } else if (appDelegate->fromTime == 2) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"02:00", @"")];
+            } else if (appDelegate->fromTime == 3) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"03:00", @"")];
+            } else if (appDelegate->fromTime == 4) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"04:00", @"")];
+            } else if (appDelegate->fromTime == 5) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"05:00", @"")];
+            } else if (appDelegate->fromTime == 6) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"06:00", @"")];
+            } else if (appDelegate->fromTime == 7) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"07:00", @"")];
+            } else if (appDelegate->fromTime == 8) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"08:00", @"")];
+            } else if (appDelegate->fromTime == 9) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"09:00", @"")];
+            } else if (appDelegate->fromTime == 10) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"10:00", @"")];
+            } else if (appDelegate->fromTime == 11) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"11:00", @"")];
+            } else if (appDelegate->fromTime == 12) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"12:00", @"")];
+            } else if (appDelegate->fromTime == 13) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"13:00", @"")];
+            } else if (appDelegate->fromTime == 14) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"14:00", @"")];
+            } else if (appDelegate->fromTime == 15) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"15:00", @"")];
+            } else if (appDelegate->fromTime == 16) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"16:00", @"")];
+            } else if (appDelegate->fromTime == 17) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"17:00", @"")];
+            } else if (appDelegate->fromTime == 18) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"18:00", @"")];
+            } else if (appDelegate->fromTime == 19) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"19:00", @"")];
+            } else if (appDelegate->fromTime == 20) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"20:00", @"")];
+            } else if (appDelegate->fromTime == 21) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"21:00", @"")];
+            } else if (appDelegate->fromTime == 22) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"22:00", @"")];
+            } else if (appDelegate->fromTime == 23) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"23:00", @"")];
+            }
+            
+            cell.detailTextLabel.text = CameraString;
+            
+        } else if (row == SearchTo_ROW_INDEX) {
+            
+            cell.textLabel.text = NSLocalizedString(@"To", @"");
+            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            
+            CameraString = @"";
+            
+            if (appDelegate->toTime == 0) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"01:00", @"")];
+            } else if (appDelegate->toTime == 1) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"02:00", @"")];
+            } else if (appDelegate->toTime == 2) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"03:00", @"")];
+            } else if (appDelegate->toTime == 3) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"04:00", @"")];
+            } else if (appDelegate->toTime == 4) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"05:00", @"")];
+            } else if (appDelegate->toTime == 5) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"06:00", @"")];
+            } else if (appDelegate->toTime == 6) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"07:00", @"")];
+            } else if (appDelegate->toTime == 7) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"08:00", @"")];
+            } else if (appDelegate->toTime == 8) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"09:00", @"")];
+            } else if (appDelegate->toTime == 9) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"10:00", @"")];
+            } else if (appDelegate->toTime == 10) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"11:00", @"")];
+            } else if (appDelegate->toTime == 11) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"12:00", @"")];
+            } else if (appDelegate->toTime == 12) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"13:00", @"")];
+            } else if (appDelegate->toTime == 13) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"14:00", @"")];
+            } else if (appDelegate->toTime == 14) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"15:00", @"")];
+            } else if (appDelegate->toTime == 15) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"16:00", @"")];
+            } else if (appDelegate->toTime == 16) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"17:00", @"")];
+            } else if (appDelegate->toTime == 17) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"18:00", @"")];
+            } else if (appDelegate->toTime == 18) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"19:00", @"")];
+            } else if (appDelegate->toTime == 19) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"20:00", @"")];
+            } else if (appDelegate->toTime == 20) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"21:00", @"")];
+            } else if (appDelegate->toTime == 21) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"22:00", @"")];
+            } else if (appDelegate->toTime == 22) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"23:00", @"")];
+            } else if (appDelegate->toTime == 23) {
+                CameraString = [CameraString stringByAppendingString:NSLocalizedString(@"24:00", @"")];
+            }
+            
+            cell.detailTextLabel.text = CameraString;
+            
+        } else if (row == SearchDay_ROW_INDEX) {
+            
+            cell.textLabel.text = NSLocalizedString(@"Repeat", @"");
+            cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            
+            CameraString = @"";
+            
+            for (int i=0;i<=6;i++){
+                if (appDelegate->chooseDay[i]!=0) {
+                    if (i==0) {
+                        CameraString = [CameraString stringByAppendingString:NSLocalizedString(@" Sun", @"")];
+                    } else if (i==1) {
+                        CameraString = [CameraString stringByAppendingString:NSLocalizedString(@" Mon", @"")];
+                    } else if (i==2) {
+                        CameraString = [CameraString stringByAppendingString:NSLocalizedString(@" Tue", @"")];
+                    } else if (i==3) {
+                        CameraString = [CameraString stringByAppendingString:NSLocalizedString(@" Wed", @"")];
+                    } else if (i==4) {
+                        CameraString = [CameraString stringByAppendingString:NSLocalizedString(@" Thu", @"")];
+                    } else if (i==5) {
+                        CameraString = [CameraString stringByAppendingString:NSLocalizedString(@" Fri", @"")];
+                    } else if (i==6) {
+                        CameraString = [CameraString stringByAppendingString:NSLocalizedString(@" Sat", @"")];
+                    }
+                }
+            }
+            
+            cell.detailTextLabel.text = CameraString;
+            
+        } else if (row == MotionSwitch_ROW_INDEX) {
+            
+            cell.textLabel.text = NSLocalizedString(@"Motion", @"");
+            UISwitch *motion = [[UISwitch alloc]init];
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+            cell.accessoryView = motion;
+            [motion addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+            
+        }
+    } else if (section == DeleteRecSchedule_SECTION_INDEX) {
+        if (row == DeleteSchedule_ROW_INDEX) {
+            
+            cell.textLabel.text = NSLocalizedString(@"Delete Schedule", @"");
+            
+        }
+    }
+    
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    NSUInteger section = [indexPath section];
+    NSUInteger row = [indexPath row];
+    
+    if (section == SetRecSchedule_SECTION_INDEX) {
+        if (row == CameraChannel_ROW_INDEX) {
+            CameraPickerController *controller = [[CameraPickerController alloc] initWithStyle:UITableViewStyleGrouped delegate:self];
+            controller.camera = self.camera;
+            [self.navigationController pushViewController:controller animated:YES];
+            [controller release];
+            
+        } else if (row == SearchFrom_ROW_INDEX) {
+            SearchFromController *controller = [[SearchFromController alloc] initWithStyle:UITableViewStyleGrouped delegate:self];
+            controller.camera = self.camera;
+            [self.navigationController pushViewController:controller animated:YES];
+            [controller release];
+            
+        } else if (row == SearchTo_ROW_INDEX) {
+            SearchToController *controller = [[SearchToController alloc] initWithStyle:UITableViewStyleGrouped delegate:self];
+            controller.camera = self.camera;
+            [self.navigationController pushViewController:controller animated:YES];
+            [controller release];
+            
+        } else if (row == SearchDay_ROW_INDEX) {
+            DayPickerController *controller = [[DayPickerController alloc] initWithStyle:UITableViewStyleGrouped delegate:self];
+            controller.camera = self.camera;
+            [self.navigationController pushViewController:controller animated:YES];
+            [controller release];
+        }
+    } else if (section == DeleteRecSchedule_SECTION_INDEX) {
+        if (row == DeleteSchedule_ROW_INDEX) {
+            
+            if (![self checkAllValueSet]) {
+                return;
+            }
+            
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"", @"") message:NSLocalizedString(@"Delete schedule?", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"Cancel", @"") otherButtonTitles:NSLocalizedString(@"OK", @""),nil];
+            [alert show];
+            [alert release];
+        }
+    }
+}
+
+#pragma mark - Switch Methods
+- (void) switchChanged:(id)sender
+{
+    UISwitch* switchControl = sender;
+    NSLog( @"The switch is %@", switchControl.on ? @"ON" : @"OFF" );
+    
+    motionSwitch = switchControl.on;
+}
+
+#pragma mark - UIAlertViewDelegate implementation
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 0 && deleteSchedule==YES){
+//        [self.navigationController popViewControllerAnimated:YES];
+    } else if (buttonIndex == 1) {
+        [self deleteSchedule];
+    }
+}
+
+//#pragma mark - CameraPickerDelegate Methods
+//- (void)didSetCameraChannel {
+//    
+//    [self.tableView reloadData];
+//}
+
+@end

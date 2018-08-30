@@ -1,0 +1,42 @@
+//
+//  RecordDurationController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/11/5.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+
+@protocol RecordDurationDelegate;
+
+@interface RecordDurationController : UITableViewController <MyCameraDelegate> {
+    
+    MyCamera *camera;
+    NSArray *labelItems;
+    NSInteger origValue;
+    NSInteger newValue;
+    //NSString *recDuration;
+    
+    id<RecordDurationDelegate> delegate;
+}
+
+@property (nonatomic, retain) MyCamera *camera;
+@property (nonatomic, retain) NSArray *labelItems;
+@property (nonatomic) NSInteger origValue;
+@property (nonatomic) NSInteger newValue;
+//@property (nonatomic, retain) NSString *recDuration;
+@property (nonatomic, assign) id<RecordDurationDelegate> delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<RecordDurationDelegate>)delegate;
+- (IBAction)back:(id)sender;
+
+@end
+
+@protocol RecordDurationDelegate
+
+//- (void)didSetRecordDuration:(NSString *)recDuration;
+- (void)didSetRecordDuration:(NSInteger *)value;
+
+@end

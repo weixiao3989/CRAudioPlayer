@@ -1,0 +1,216 @@
+//
+//  UIImage+DrawImage.m
+//
+//  Created by Darktt on 13/6/3.
+//  Copyright (c) 2013 Darktt Personal Company. All rights reserved.
+//
+
+#import "UIImage+DrawImage.h"
+
+@implementation UIImage (DrawImage)
+
+#pragma mark - Draw Gradient Image
+
++ (instancetype)imageWithColor:(UIColor *)color size:(CGSize)size
+{
+    CGFloat location[] = {0.0f, 1.0f};
+    
+    return [self drawGradientImageWithRect:CGRectMake(0, 0, size.width, size.height) beginColor:color endColor:color location:location];
+}
+
++ (instancetype)drawGradientImageWithRect:(CGRect)frame beginColor:(UIColor *)beginColor endColor:(UIColor *)endColor location:(CGFloat *)location
+{
+    return [self drawGradientImageWithRect:frame gradientColors:@[(id)beginColor.CGColor, (id)endColor.CGColor] location:location];
+}
+
++ (instancetype)drawGradientImageWithRect:(CGRect)frame gradientColors:(NSArray *)gradientColors location:(CGFloat *)location
+{
+    CGSize imageSize = frame.size;
+    
+    UIGraphicsBeginImageContext(imageSize);
+    
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, (CFArrayRef)gradientColors, location);
+    
+    UIBezierPath *bezierPath = [UIBezierPath bezierPathWithRect:CGRectMake(0, 0, imageSize.width, imageSize.height)];
+    CGContextSaveGState(context);
+    [bezierPath addClip];
+    
+    CGPoint beginPoint = CGPointMake(imageSize.width / 2, 0);
+    CGPoint endPoint = CGPointMake(imageSize.width / 2, imageSize.height);
+    
+    CGContextDrawLinearGradient(context, gradient, beginPoint, endPoint, 0);
+    CGContextRestoreGState(context);
+    
+    UIImage *drawnImage = UIGraphicsGetImageFromCurrentImageContext();
+    [drawnImage resizableImageWithCapInsets:UIEdgeInsetsMake(0, 20.0f, 0, 20.0f)];
+    
+    UIGraphicsEndImageContext();
+    CGColorSpaceRelease(colorSpace);
+    CGGradientRelease(gradient);
+    
+    return drawnImage;
+}
+
++ (instancetype)bicycleMapsNavigationImage
+{
+    CGSize imageSize = CGSizeMake(320, 44);
+    
+    UIGraphicsBeginImageContext(imageSize);
+    
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    UIColor *beginGradientColor = [UIColor colorWithRed:51.0f/255.0f green:102.0f/255.0f blue:204.0f/255.0f alpha:1];
+    UIColor *endGradientColor = [UIColor colorWithRed:0 green:0 blue:102.0f/255.0f alpha:1];
+    
+    NSArray *gradientColors = @[(id)beginGradientColor.CGColor, (id)endGradientColor.CGColor];
+    CGFloat gradientLocations[] = {0 ,1};
+    CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, (CFArrayRef)gradientColors, gradientLocations);
+    
+    UIBezierPath *navigationBgPath = [UIBezierPath bezierPathWithRect:CGRectMake(0, 0, imageSize.width, imageSize.height)];
+    CGContextSaveGState(context);
+    [navigationBgPath addClip];
+    
+    CGPoint beginPoint = CGPointMake(imageSize.width / 2, 0);
+    CGPoint endPoint = CGPointMake(imageSize.width / 2, imageSize.height);
+    
+    CGContextDrawLinearGradient(context, gradient, beginPoint, endPoint, 0);
+    CGContextRestoreGState(context);
+    
+    UIImage *navigationBgImage = UIGraphicsGetImageFromCurrentImageContext();
+    [navigationBgImage resizableImageWithCapInsets:UIEdgeInsetsMake(0, 20.0f, 0, 20.0f)];
+    
+    UIGraphicsEndImageContext();
+    CGColorSpaceRelease(colorSpace);
+    CGGradientRelease(gradient);
+    
+    return navigationBgImage;
+}
+
++ (instancetype)redGradientImageWithRect:(CGRect)frame
+{
+    UIColor *beginColor = [UIColor colorWithRed:230/255.0f green:54/255.0f blue:54/255.0f alpha:1];
+    UIColor *endColor = [UIColor colorWithRed:186/255.0f green:51/255.0f blue:51/255.0f alpha:1];
+    NSArray *colors = [NSArray arrayWithObjects:(id)beginColor.CGColor, (id)endColor.CGColor, nil];
+    
+    CGFloat location[] = {0, 1};
+    
+    UIImage *redGradientImage = [self drawGradientImageWithRect:frame gradientColors:colors location:location];
+    
+    return redGradientImage;
+}
+
++ (instancetype)grayGradientImageWithRect:(CGRect)frame
+{
+    UIColor *beginColor = [UIColor colorWithWhite:241/255.0f alpha:1];
+    UIColor *endColor = [UIColor colorWithWhite:220/255.0f alpha:1];
+    NSArray *colors = [NSArray arrayWithObjects:(id)beginColor.CGColor, (id)endColor.CGColor, nil];
+    
+    CGFloat location[] = {0, 1};
+    
+    UIImage *grayGradientImage = [self drawGradientImageWithRect:frame gradientColors:colors location:location];
+    
+    return grayGradientImage;
+}
+
++ (instancetype)blueGradientImageWithRect:(CGRect)frame
+{
+    UIColor *beginColor = [UIColor colorWithRed:43/255.0f green:128/255.0f blue:240/255.0f alpha:1];
+    UIColor *endColor = [UIColor colorWithRed:43/255.0f green:108/255.0f blue:194/255.0f alpha:1];
+    NSArray *colors = [NSArray arrayWithObjects:(id)beginColor.CGColor, (id)endColor.CGColor, nil];
+    
+    CGFloat location[] = {0, 1};
+    
+    UIImage *blueGradientImage = [self drawGradientImageWithRect:frame gradientColors:colors location:location];
+    
+    return blueGradientImage;
+}
+
++ (instancetype)greenGradientImageWithRect:(CGRect)frame
+{
+    UIColor *beginColor = [UIColor colorWithRed:68/255.0f green:205/255.0f blue:37/255.0f alpha:1];
+    UIColor *endColor = [UIColor colorWithRed:59/255.0f green:164/255.0f blue:36/255.0f alpha:1];
+    NSArray *colors = [NSArray arrayWithObjects:(id)beginColor.CGColor, (id)endColor.CGColor, nil];
+    
+    CGFloat location[] = {0, 1};
+    
+    UIImage *greenGradientImage = [self drawGradientImageWithRect:frame gradientColors:colors location:location];
+    
+    return greenGradientImage;
+}
+
++ (instancetype)purpleGradientImageWithRect:(CGRect)frame
+{
+    UIColor *beginColor = [UIColor colorWithRed:90/255.0f green:0 blue:139/255.0f alpha:1];
+    UIColor *endColor = [UIColor colorWithRed:40/255.0f green:0 blue:88/255.0f alpha:1];
+    NSArray *colors = [NSArray arrayWithObjects:(id)beginColor.CGColor, (id)endColor.CGColor, nil];
+    
+    CGFloat location[] = {0, 1};
+    
+    UIImage *purpleGradientImage = [self drawGradientImageWithRect:frame gradientColors:colors location:location];
+    
+    return purpleGradientImage;
+}
+
++ (instancetype)lightYellowGradientImageWithRect:(CGRect)frame
+{
+    UIColor *beginColor = [UIColor colorWithRed:250/255.0f green:224/255.0f blue:187/255.0f alpha:1];
+    UIColor *midColor = [UIColor colorWithRed:253/255.0f green:233/255.0f blue:196/255.0f alpha:1];
+    UIColor *endColor = [UIColor colorWithRed:255/255.0f green:239/255.0f blue:203/255.0f alpha:1];
+    
+    NSArray *colors = @[(id)beginColor.CGColor, (id)midColor.CGColor, (id)endColor.CGColor];
+    
+    CGFloat location[] = {0, 0.75, 1};
+    
+    UIImage *lightYellowGradientImage = [self drawGradientImageWithRect:frame gradientColors:colors location:location];
+    
+    return lightYellowGradientImage;
+}
+
+#pragma mark - Draw Rouned Rect Gradient Image
+
++ (instancetype)drawRounedRectImageWithRect:(CGRect)frame cornerRadius:(CGFloat)cornerRadius gradientColors:(NSArray *)gradientColors lineColor:(UIColor *)lineColor gradientLocation:(CGFloat *)gradientLocation
+{
+    CGSize imageSize = frame.size;
+    CGFloat linWidth = 3.0f;
+    
+    UIGraphicsBeginImageContextWithOptions(imageSize, NO, 0.0);
+    
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, (CFArrayRef)gradientColors, gradientLocation);
+    
+    UIBezierPath *bezierPath = [UIBezierPath bezierPathWithRoundedRect:frame cornerRadius:cornerRadius];
+
+    CGContextSaveGState(context);
+    [bezierPath addClip];
+    
+    CGPoint beginPoint = CGPointMake(imageSize.width / 2, 0);
+    CGPoint endPoint = CGPointMake(imageSize.width / 2, imageSize.height);
+    
+    CGContextDrawLinearGradient(context, gradient, beginPoint, endPoint, 0);
+    
+    if (lineColor != nil) {
+        CGContextSetStrokeColorWithColor(context, [lineColor CGColor]);
+        
+        [bezierPath setLineWidth:linWidth];
+        [bezierPath stroke];
+    }
+    
+    CGContextRestoreGState(context);
+    
+    UIImage *drawnImage = UIGraphicsGetImageFromCurrentImageContext();
+    [drawnImage resizableImageWithCapInsets:UIEdgeInsetsMake(linWidth, linWidth, linWidth, linWidth)];
+    
+    UIGraphicsEndImageContext();
+    CGColorSpaceRelease(colorSpace);
+    CGGradientRelease(gradient);
+    
+    return drawnImage;
+}
+
+@end

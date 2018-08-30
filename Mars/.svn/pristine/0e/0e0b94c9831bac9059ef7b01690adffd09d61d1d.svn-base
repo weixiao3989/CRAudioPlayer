@@ -1,0 +1,27 @@
+//
+//  GetRecScheduleController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/25.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+
+@interface GetRecScheduleController : UIViewController <MyCameraDelegate>{
+    UIImage *rect;
+    MyCamera *camera;
+    
+    NSInteger DayOfWeek;
+    NSInteger reciveIOC;
+    
+    unsigned int rec[7][24][4];
+    BOOL reciveALL;
+    
+    UIActivityIndicatorView *showScheduleIndicator;
+}
+
+@property (nonatomic, retain) MyCamera *camera;
+
+@end

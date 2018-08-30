@@ -1,0 +1,235 @@
+//
+//  CameraPairingController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/11/5.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "CameraPairingController.h"
+#import <IOTCamera/AVIOCTRLDEFs.h>
+
+#include <netdb.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+@implementation CameraPairingController
+
+@synthesize camera;
+@synthesize labelItems;
+//@synthesize origValue;
+@synthesize newValue;
+@synthesize delegate;
+
+-(void)openUrl:(NSString *)IP
+{
+    NSString *urlStr = [NSString stringWithFormat:@"http://%@/apns/apns.php?cmd=hello",IP];
+    
+    NSURL *url = [NSURL URLWithString:urlStr];
+    
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc ]initWithURL:url cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:60];
+    
+    pageData = [[NSMutableData alloc]init];
+    
+    [request setHTTPMethod:@"GET"];
+    
+    [request addValue:@"text/html" forHTTPHeaderField:@"Content-Type"];
+    
+    NSURLConnection *conn = [[NSURLConnection alloc]initWithRequest:request delegate:self];
+    
+    [request release];
+    
+    [conn release];
+}
+
+
+- (void)connection:(NSURLConnection *)aConn didReceiveData:(NSData *)data {
+    
+    if (pageData!=nil){
+        pageData = nil;
+        
+        pageData = [[NSMutableData alloc]init];
+    }
+    
+    [pageData appendData:data];
+    
+}
+
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)aConn {
+    
+    NSString *results = [[NSString alloc] initWithData:pageData encoding:NSUTF8StringEncoding];
+    
+    //[webView loadHTMLString:results baseURL:nil];
+    NSLog(@"%@",results);
+    
+}
+
+//TEST for get IP
+-(void)getIPWithHostName:(const NSString*)hostName
+{
+    const char *hostN= [hostName UTF8String];
+    struct hostent* phot;
+    
+    @try {
+        phot = gethostbyname(hostN);
+        
+    }
+    @catch (NSException *exception) {
+        //return nil;
+    }
+        
+    for (int i = 0; phot->h_addr_list[i] ; i++) {
+        
+        struct in_addr ip_addr;
+        memcpy(&ip_addr, phot->h_addr_list[i], 4);
+        char ip[20] = {0};
+        inet_ntop(AF_INET, &ip_addr, ip, sizeof(ip));
+        
+        NSString* strIPAddress = [NSString stringWithUTF8String:ip];
+        
+        NSLog(@"IP:%@",strIPAddress);
+        
+        [self openUrl:strIPAddress];
+    }
+}
+
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<CameraPairingDelegate>)delegate_ {
+    
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        self.delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    
+    if (newValue != -1){ //&& origValue != newValue) {
+        
+        SMsgAVIoctrlSetPairingReq *structSetPairing = malloc(sizeof(SMsgAVIoctrlSetPairingReq));
+        memset(structSetPairing, 0, sizeof(SMsgAVIoctrlSetPairingReq));
+        
+        structSetPairing->channel = (int)newValue;
+        structSetPairing->isParing = 1;
+        
+        [camera sendIOCtrlToChannel:0
+                               Type:IOTYPE_USER_IPCAM_SET_PAIRING_REQ
+                               Data:(char *)structSetPairing
+                           DataSize:sizeof(SMsgAVIoctrlSetPairingReq)];
+        
+        free(structSetPairing);
+        
+        //if (self.delegate) [self.delegate didSetCameraPairing:newValue];
+    }
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - View lifecycle
+
+- (void)viewDidLoad {
+    
+    //[self getIPWithHostName:@"tpns.tutk.com"];
+    //[self getIPWithHostName:@"www.google.com"];
+    
+    labelItems = [[NSArray alloc] initWithObjects:NSLocalizedString(@"Camera 1", @""),
+                  NSLocalizedString(@"Camera 2", @""),
+                  NSLocalizedString(@"Camera 3", @""),
+                  NSLocalizedString(@"Camera 4", @""), nil];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Back", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    self.navigationItem.title = NSLocalizedString(@"Device Buzzer", @"");
+    
+    self.newValue = -1;
+    
+    [super viewDidLoad];
+}
+
+- (void)viewDidUnload {
+    
+    self.delegate = nil;
+    self.labelItems = nil;
+    self.camera = nil;
+    [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    self.camera.delegate2 = self;
+    [super viewWillAppear:animated];
+}
+
+- (void)dealloc {
+    
+    self.delegate = nil;
+    [self.labelItems release];
+    [self.camera release];
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView
+ numberOfRowsInSection:(NSInteger)section {
+    return (section == 0) ? [self.labelItems count] : 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    static NSString *CameraPairingTableIdentifier = @"CameraPairingTableIdentifier";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:CameraPairingTableIdentifier];
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CameraPairingTableIdentifier]
+                autorelease];
+    }
+    
+    cell.textLabel.text = [labelItems objectAtIndex:row];
+    //cell.accessoryType = (row == self.origValue) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+    
+    
+    return cell;
+}
+
+#pragma mark - TableView Delegate Methods
+- (void)tableView:(UITableView *)tableView
+didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    for (UITableViewCell *cell in [self.tableView visibleCells])
+        cell.accessoryType = UITableViewCellAccessoryNone;
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+    cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    
+    self.newValue = [indexPath row]+1;
+    
+    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+//#pragma mark - MyCameraDelegate Methods
+//- (void)camera:(MyCamera *)camera_ _didReceiveIOCtrlWithType:(NSInteger)type Data:(const char *)data DataSize:(NSInteger)size {
+//    
+//    if (camera_ == camera && type == IOTYPE_USER_IPCAM_GET_DEVICEALARM_RESP) {
+//        
+//        SMsgAVIoctrlGetDeviceAlarmReq *s = (SMsgAVIoctrlGetDeviceAlarmReq*)data;
+//        memcpy(s, data, size);
+//        self.origValue = s->isDeviceAlarm;
+//        
+//        [self.tableView reloadData];
+//    }
+//}
+@end

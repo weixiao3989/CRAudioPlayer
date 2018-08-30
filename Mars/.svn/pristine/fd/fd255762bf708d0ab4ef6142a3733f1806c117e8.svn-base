@@ -1,0 +1,874 @@
+//
+//  SmartLinkController.m
+//
+//  SmartLink 實作.
+//
+//  Created by Chris on 05/04/18.
+//  Copyright (c) 2018 Mars. All rights reserved.
+//
+
+#import "SmartLinkController.h"
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+
+@implementation SmartLinkController
+
+@synthesize labelItems, retryNumber;
+@synthesize textFieldSSID, textFieldMAC, textFieldPassword;
+@synthesize packetData, seqData;
+@synthesize SSID, MAC, ipaddr, rc4Key, magicNumber, ackData;
+@synthesize cmdNumber, testDataRetryNum;
+@synthesize mUdpSocket, mSocket, receive_TCP_Socket, receive_UDP_Socket;
+@synthesize run_thread;
+@synthesize timeout_timer;
+@synthesize _isRunning, _isConnected;
+@synthesize isTCP_ReciverOK, isUDP_ReciverOK;
+
+#pragma mark - View lifecycle
+- (void)viewDidLoad
+{
+    self.labelItems = [[NSArray alloc] initWithObjects:NSLocalizedString(@"SSID", @""),
+                                                       NSLocalizedString(@"MAC", @""),
+                                                       NSLocalizedString(@"PASS", @""), nil];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Cancel", @"")
+                                             style:UIBarButtonItemStylePlain
+                                             target:self
+                                             action:@selector(cancel:)];
+    
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+                                              initWithTitle:NSLocalizedString(@"send", @"")
+                                              style:UIBarButtonItemStylePlain
+                                              target:self
+                                              action:@selector(send:)];
+    
+    self.navigationItem.title = NSLocalizedString(@"Smart Link", @"");
+    
+    // 宣告按下 Home 時此 APP 通知事件.
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(applicationWillResignActive:)
+                                                 name:UIApplicationWillResignActiveNotification
+                                               object:nil];
+    
+    // Chris + 180612. 新增當前頁面不允許旋轉屏幕.
+    AppDelegate *appdelegate = (AppDelegate *)[UIApplication sharedApplication].delegate;
+    appdelegate.allowRotation = NO;
+    
+    // Chris + 180504. 取得 WiFi 相關訊息.
+    NSArray *interFaceNames = (id)CNCopySupportedInterfaces();
+    
+    for (NSString *name in interFaceNames) {
+        NSDictionary *info = (id)CNCopyCurrentNetworkInfo((__bridge CFStringRef)name);
+        
+        self.SSID = info[@"SSID"];
+        self.MAC = info[@"BSSID"];
+    }
+    
+    // 取得當前 IP Address.
+    self.ipaddr = [self getIPAddress];
+    
+    // Chris + 180505. SmartLink Parameters.
+    self.testDataRetryNum = 200;
+    self.cmdNumber = 3;
+    self.rc4Key = @"Key";
+    self.magicNumber = @"iot";
+
+    self.packetData = [NSMutableArray arrayWithObjects:@"", @"", @"" , nil];
+    self.seqData = [NSMutableArray arrayWithObjects:@"", @"", @"" , nil];
+    self.retryNumber = [[NSArray alloc] initWithObjects:@"20", @"20", @"15", nil];
+
+    [super viewDidLoad];
+}
+
+- (void)viewDidAppear:(BOOL)animated
+{
+    _isConnected = NO;
+    _isRunning = NO;
+    isTCP_ReciverOK = NO;
+    isUDP_ReciverOK = NO;
+    
+    [super viewDidAppear:animated];
+}
+
+- (void)viewDidDisappear:(BOOL)animated
+{
+    // Chris + 180612. 離開前頁面時改回 allowRotation 值(預設 YES).
+    AppDelegate *appdelegate = (AppDelegate *)[UIApplication sharedApplication].delegate;
+    appdelegate.allowRotation = YES;
+    
+    self.labelItems = nil;
+    self.textFieldSSID = nil;
+    self.textFieldMAC = nil;
+    self.textFieldPassword = nil;
+    self.packetData = nil;
+    self.seqData = nil;
+    self.SSID = nil;
+    self.MAC = nil;
+    self.ipaddr = nil;
+    self.rc4Key = nil;
+    self.magicNumber = nil;
+    self.ackData = nil;
+    self.cmdNumber = nil;
+    self.testDataRetryNum = nil;
+    self.mUdpSocket = nil;
+    self.mSocket = nil;
+    self.receive_TCP_Socket = nil;
+    self.receive_UDP_Socket = nil;
+    [self.run_thread cancel];
+    self.run_thread = nil;
+    self.retryNumber = nil;
+    
+    [super viewDidDisappear:animated];
+}
+
+- (void)dealloc
+{
+    [self.labelItems release];
+    [self.textFieldSSID release];
+    [self.textFieldMAC release];
+    [self.textFieldPassword release];
+    [self.packetData release];
+    [self.seqData release];
+    [self.SSID release];
+    [self.MAC release];
+    [self.ipaddr release];
+    [self.rc4Key release];
+    [self.magicNumber release];
+    [self.ackData release];
+    [self.mUdpSocket release];
+    [self.mSocket release];
+    [self.receive_TCP_Socket release];
+    [self.receive_UDP_Socket release];
+    [self.run_thread release];
+    [self.retryNumber release];
+    
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return 3;
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 50;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSUInteger row = [indexPath row];
+    static NSString *SmartLinkCellIdentifier = @"SmartLinkCellIdentifier";
+    
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:SmartLinkCellIdentifier];
+    
+    if (cell == nil)
+    {
+        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:SmartLinkCellIdentifier] autorelease];
+        
+        UILabel *label = [[UILabel alloc] initWithFrame: CGRectMake(10, 10, 75, 25)];        
+        label.textAlignment = NSTextAlignmentRight;
+        label.tag = LABEL_TAG;
+        label.font = [UIFont boldSystemFontOfSize:[UIFont labelFontSize]];
+        [cell.contentView addSubview:label];
+        [label release];
+        
+        if (row == 0) {
+            self.textFieldSSID = [[UITextField alloc] initWithFrame: CGRectMake(120, 12, 200, 25)];
+            self.textFieldSSID.text = @"";
+            self.textFieldSSID.clearsOnBeginEditing = YES;
+            [self.textFieldSSID setDelegate:self];
+            [self.textFieldSSID addTarget:self action:@selector(textFieldDone:) forControlEvents:UIControlEventEditingDidEndOnExit];
+            self.textFieldSSID.enabled = FALSE;
+            
+            [cell.contentView addSubview:self.textFieldSSID];
+        }
+        else if (row == 1) {
+            self.textFieldMAC = [[UITextField alloc] initWithFrame: CGRectMake(120, 12, 200, 25)];
+            self.textFieldMAC.text = @"";
+            self.textFieldMAC.clearsOnBeginEditing = YES;
+            [self.textFieldMAC setDelegate:self];
+            [self.textFieldMAC addTarget:self action:@selector(textFieldDone:) forControlEvents:UIControlEventEditingDidEndOnExit];
+            self.textFieldMAC.enabled = FALSE;
+            
+            [cell.contentView addSubview:self.textFieldMAC];
+        }
+        else if (row == 2) {
+            self.textFieldPassword = [[UITextField alloc] initWithFrame: CGRectMake(120, 12, 200, 25)];
+            self.textFieldPassword.text = @"";
+            self.textFieldPassword.clearsOnBeginEditing = YES;
+            [self.textFieldPassword setDelegate:self];
+            [self.textFieldPassword addTarget:self action:@selector(textFieldDone:) forControlEvents:UIControlEventEditingDidEndOnExit];
+            
+            [cell.contentView addSubview:self.textFieldPassword];
+            
+            
+            // 新增密碼 Cell 右邊放置顯示密碼 icon.
+            UIImageView *imgView = [[UIImageView alloc] initWithFrame:CGRectMake(270, 6, 36, 36)];
+            [imgView setImage: [UIImage imageNamed:@"ic_show_password"]];
+            [imgView setUserInteractionEnabled:YES];
+            
+            UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showPW:)];
+            [singleTap setNumberOfTapsRequired:1];
+            [imgView addGestureRecognizer:singleTap];
+            
+            [cell.contentView addSubview:imgView];
+            [imgView release];
+        }
+    }
+    
+	
+    UILabel *label = (UILabel *)[cell viewWithTag:LABEL_TAG];
+    UITextField *textField = nil;
+    
+    for (UIView *oneView in cell.contentView.subviews) {
+        if ([oneView isMemberOfClass:[UITextField class]])
+            textField = (UITextField *)oneView;
+    }
+    
+    label.text = [labelItems objectAtIndex:row];  
+    label.backgroundColor = [UIColor clearColor];
+    label.opaque = NO;
+    
+    NSNumber *rowAsNum = [[NSNumber alloc] initWithInt:(int)row];
+    
+    switch (row) {
+        case 0:
+            textField.placeholder = self.SSID;
+            break;
+            
+        case 1:
+            textField.placeholder = self.MAC;
+            break;
+            
+        case 2:
+            textField.secureTextEntry = YES; // 密碼行(顯示 * 字, 禁止複製).
+            break;
+            
+        default:
+            break;
+    }
+    
+    if (row>0) {
+        textField.tag = row;
+        [rowAsNum release];
+    }
+    return cell;    
+}
+
+- (NSIndexPath *)tableView:(UITableView *)tableView willSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return nil;
+}
+
+
+#pragma mark - IBAction Methods
+- (IBAction)send:(id)sender
+{
+    [self.textFieldPassword resignFirstResponder]; // 收回鍵盤.
+    
+    self.navigationItem.rightBarButtonItem.enabled = FALSE; // 關閉右上角 BarItem 狀態.
+    
+    // 關閉當前 Window Interaction.
+    [self.view.window setUserInteractionEnabled:FALSE];
+    
+    // 顯示 WaitDialog (此處還是要傳遞 UIView, 若輸入密碼時按下發送, TopView 會是 TextField).
+    [WaitingDialogView showWaitingDialogView_Portrait:self.view title:NSLocalizedString(@"dialog_Msg_SmartLink", @"")];
+    
+    _isRunning = YES;
+    _isConnected = NO;
+    
+    // 透過 Thread 開啟 Listen TCP/UDP Packets.
+    [NSThread detachNewThreadSelector:@selector(listenForTCPPackets) toTarget:self withObject:nil];
+    
+    [NSThread detachNewThreadSelector:@selector(listenForUDPPackets) toTarget:self withObject:nil];
+    
+    // 最後開始 SmartLinkStart.
+    [NSThread detachNewThreadSelector:@selector(smartLinkStart) toTarget:self withObject:nil];
+}
+
+- (IBAction)cancel:(id)sender
+{
+    [self smartLinkStop];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+
+#pragma mark - UITextFieldDelegate Methods
+- (IBAction)textFieldDone:(id)sender
+{
+    [sender resignFirstResponder];
+}
+
+- (void)textFieldDidBeginEditing:(UITextField *)textField
+{
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField
+{
+}
+
+
+#pragma mark - UIApplication Delegate
+- (void)applicationWillResignActive:(NSNotification *)notification
+{
+    [self smartLinkStop];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - GCDAsyncSocketDelegate Methods
+- (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket
+{
+    self.receive_TCP_Socket = newSocket;
+    
+    if ([newSocket localPort] == 8209)
+        [newSocket readDataWithTimeout:10 tag:11];
+}
+
+- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
+{
+    if (!self.isUDP_ReciverOK)
+    {
+        NSString *receviceData = [NSString stringWithFormat:@"SmartLink -> didReadData, data is %@, tag is : %ld", data, tag];
+        [MarsCloud_Tools LogPrint:ll_Debug message:receviceData];
+
+        if (data != nil && tag == 11) {
+            [MarsCloud_Tools showToastMessage:NSLocalizedString(@"SmartLink Success", @"") length:TOAST_LENGTH_LONG];
+
+            self._isRunning = NO;
+            self._isConnected = YES;
+            self.isTCP_ReciverOK = YES;
+        } else {
+            [MarsCloud_Tools showToastMessage:NSLocalizedString(@"dialog_Msg_SmartLink_Fail", @"") length:TOAST_LENGTH_LONG];
+        }
+        
+        [self smartLinkStop];
+    }
+}
+
+#pragma mark - SmartLink Methods
+- (void)smartLinkStart
+{
+    for (int i = 0; i < 8 && _isRunning; i++) {
+        [self run_ThreadRoutine];
+    }
+
+    _isRunning = NO;
+    
+    if (!_isConnected)
+        [self waitingTimeOut];
+}
+
+- (void)smartLinkStop
+{
+    self._isRunning = NO;
+
+    self.navigationItem.rightBarButtonItem.enabled = TRUE;
+    [self.view.window setUserInteractionEnabled:TRUE];
+    
+    if ([WaitingDialogView isShowWaitingDialogView:self.view]) {
+        [WaitingDialogView stopWaitingDialogView:self.view];
+    }
+    
+    [self.mUdpSocket close];
+    
+    if (_isConnected)
+        [self.navigationController popViewControllerAnimated:YES];
+}
+
+
+- (void)run_ThreadRoutine
+{
+    [MarsCloud_Tools LogPrint:ll_Debug message:@"SmartLink -> run_ThreadRoutine"];
+    
+    [self KSA];
+    [self PRGA];
+    [self sendTestData];
+
+    if (!_isRunning) return;
+
+    int crcDdata;
+
+    for (int z = 0; z < cmdNumber; z++)
+    {
+        if (z == 0) {
+            [self.packetData replaceObjectAtIndex:z withObject:magicNumber];
+        } else if (z == 1) {
+            NSArray *ipDataArr = [self.ipaddr componentsSeparatedByString:@"."];
+
+            NSInteger ipadd_1 = [[ipDataArr objectAtIndex:0] integerValue];
+            NSInteger ipadd_2 = [[ipDataArr objectAtIndex:1] integerValue];
+            NSInteger ipadd_3 = [[ipDataArr objectAtIndex:2] integerValue];
+            NSInteger ipadd_4 = [[ipDataArr objectAtIndex:3] integerValue];
+
+            NSString *cmdData1 = [[NSString alloc] init];
+
+            if (textFieldPassword.text.length == 0) {
+
+                if (ipadd_2 == 0 && ipadd_3 == 0) {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"\0"@"%c"@"\0"@"\0"@"%c", (int)SSID.length, (int)ipadd_1, (int)ipadd_4];
+                } else if (ipadd_2 == 0) {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"\0"@"%c"@"\0"@"%c"@"%c", (int)SSID.length, (int)ipadd_1, (int)ipadd_3, (int)ipadd_4];
+                } else if (ipadd_3 == 0) {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"\0"@"%c"@"%c"@"\0"@"%c", (int)SSID.length, (int)ipadd_1, (int)ipadd_2, (int)ipadd_4];
+                } else {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"\0"@"%c"@"%c"@"%c"@"%c", (int)SSID.length, (int)ipadd_1, (int)ipadd_2, (int)ipadd_3, (int)ipadd_4];
+                }
+
+            } else {
+
+                if (ipadd_2 == 0 && ipadd_3 == 0) {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"%c"@"%c"@"\0"@"\0"@"%c", (int)SSID.length, (int)self.textFieldPassword.text.length, (int)ipadd_1, (int)ipadd_4];
+                } else if (ipadd_2 == 0) {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"%c"@"%c"@"\0"@"%c"@"%c", (int)SSID.length, (int)self.textFieldPassword.text.length, (int)ipadd_1, (int)ipadd_3, (int)ipadd_4];
+                } else if (ipadd_3 == 0) {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"%c"@"%c"@"%c"@"\0"@"%c", (int)SSID.length, (int)self.textFieldPassword.text.length, (int)ipadd_1, (int)ipadd_2, (int)ipadd_4];
+                } else {
+                    cmdData1 = [NSString stringWithFormat:@"%c"@"%c"@"%c"@"%c"@"%c"@"%c", (int)SSID.length, (int)self.textFieldPassword.text.length, (int)ipadd_1, (int)ipadd_2, (int)ipadd_3, (int)ipadd_4];
+                }
+
+            }
+
+            [self.packetData replaceObjectAtIndex:z withObject:cmdData1];
+        } else {
+            NSString *cmdData2 = [[NSString alloc] init];
+
+            if ([self.textFieldPassword.text isEqualToString:@"0"]) {
+                cmdData2 = [NSString stringWithFormat:@"%@"@"\0", SSID];
+            } else {
+                cmdData2 = [NSString stringWithFormat:@"%@"@"%@", SSID, self.textFieldPassword.text];
+            }
+
+            [self.packetData replaceObjectAtIndex:z withObject:cmdData2];
+        }
+
+        crcDdata = [self crc8_msb:29 size:(int)[[self.packetData objectAtIndex:z] length] cmdNum:z];
+
+        if (z == 1) {
+            // Chris + 180529. 不曉得原因 CMD[1] 在尾端直接加入字符超過 (int)100的值時會跳成其他數字...
+            // 先定義一個 New NSString 存放後, 在 Replace packetData[1] 來解決此問題.
+            NSString *b_Str = self.packetData[1];
+            b_Str = [b_Str stringByAppendingFormat:@"%c", crcDdata];
+            [self.packetData replaceObjectAtIndex:1 withObject:b_Str];
+        } else {
+            NSString *add_crc_temp = [NSString stringWithFormat:@"%@%c", [self.packetData objectAtIndex:z], crcDdata];
+            [self.packetData replaceObjectAtIndex:z withObject:add_crc_temp];
+        }
+        [self addSeqPacket:z];
+    }
+
+    if (!_isRunning) return;
+
+    for (int i = 0; i < cmdNumber; i++)
+    {
+        [self cmdCryption:i];
+        for (int j = 0; j < [self.retryNumber[i] integerValue]; j++)
+        {
+            for (int k = 0; k < [self.packetData[i] length]; k++)
+            {
+                @autoreleasepool
+                {
+                    NSString *sendPacketSeq = [[NSString alloc] init];
+                    NSString *sendPacketData = [[NSString alloc] init];
+
+                    for (int g = 0; g < (tempSeq[k] + 1 + 256); g++) {
+                        sendPacketSeq = [sendPacketSeq stringByAppendingString:[self randomStringWithLength:1]];
+                    }
+
+                    for (int v = 0; v < tempPacket[k] + 1; v++) {
+                        sendPacketData = [sendPacketData stringByAppendingString:[self randomStringWithLength:1]];
+                    }
+
+                    NSData *seq_data = [sendPacketSeq dataUsingEncoding:NSASCIIStringEncoding];
+                    NSData *packet_data = [sendPacketData dataUsingEncoding:NSASCIIStringEncoding];
+                    
+                    self.mUdpSocket = [[GCDAsyncUdpSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+                    
+                    @try {
+                        NSError *error = nil;
+                        [mUdpSocket enableBroadcast:TRUE error:&(error)];
+                    }
+                    @catch (NSException *exception) {
+                        NSLog(@"SmartLink -> run_ThreadRoutine UDP Socket EnableBroadcast Error reason is : %@", exception.reason);
+                    }
+
+                    //NSString *seq_data_string = [[NSString alloc] initWithData:seq_data encoding:NSUTF8StringEncoding];
+                    // NSString *remote_send_seq_data = [NSString stringWithFormat:@"SmartLink -> Send SeqData length is : %d", (int)[seq_data_string length]];
+                    // [MarsCloud_Tools LogPrint:ll_Debug message:remote_send_seq_data];
+                    //NSLog(@"SmartLink -> Send SeqData length is : %d", (int)[seq_data length]);
+
+                    [self.mUdpSocket sendData:seq_data toHost:@"255.255.255.255" port:8300 withTimeout:5 tag:0];
+                    usleep(8000);
+
+                    //NSString *packet_data_string = [[NSString alloc] initWithData:packet_data encoding:NSUTF8StringEncoding];
+                    //NSString *remote_send_packet_data = [NSString stringWithFormat:@"SmartLink -> Send PacketData length is : %d", (int)[packet_data_string length]];
+                    //[MarsCloud_Tools LogPrint:ll_Debug message:remote_send_packet_data];
+                    //NSLog(@"SmartLink -> Send PacketData length is : %d", (int)[packet_data length]);
+
+                    [self.mUdpSocket sendData:packet_data toHost:@"255.255.255.255" port:8300 withTimeout:5 tag:0];
+                    usleep(8000);
+
+
+                    [self.mUdpSocket close];
+
+                    if (!_isRunning) return;
+                }
+            }
+        }
+    }
+
+    [MarsCloud_Tools LogPrint:ll_Debug message:@"SmartLink -> run_ThreadRoutine Over;"];
+}
+
+- (void)KSA
+{
+    NSInteger i, j = 0, temp;
+    
+    for (i = 0; i < 256; i++) {
+        stable[i] = i;
+    }
+    
+    for (i = 0; i < 256; i++) {
+        NSInteger index = i % self.rc4Key.length;
+        j = (j + stable[i] + [self.rc4Key characterAtIndex:index]) % 256;
+        temp = stable[i];
+        stable[i] = stable[j];
+        stable[j] = temp;
+    }
+}
+
+- (void)PRGA
+{
+    NSInteger m = 0, i = 0, j = 0, t, l, temp;
+    l = 256;
+    
+    while (l > 0) {
+        i = (i + 1) % 256;
+        j = (j + stable[i]) % 256;
+        temp = stable[i];
+        stable[i] = stable[j];
+        stable[j] = temp;
+        t = (stable[j] + stable[i]) % 256;
+        sonkey[m++] = stable[t];
+        l--;
+    }
+}
+
+- (void)sendTestData
+{
+    int testData[4] = {1, 2, 3, 4};
+    
+    for (int j = 0; j < self.testDataRetryNum; j++)
+    {
+        for (int k = 0; !(k >= testData[3]); k++)
+        {
+            @autoreleasepool
+            {
+                NSString *sendTestData = [[NSString alloc] init];
+                
+                for (int v = 0; v < testData[k]; v++) {
+                    sendTestData = [sendTestData stringByAppendingString:[self randomStringWithLength:1]];
+                }
+                
+                self.mUdpSocket = [[GCDAsyncUdpSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+                
+                @try {
+                    NSError *error = nil;
+                    [mUdpSocket enableBroadcast:TRUE error:&(error)];
+                }
+                @catch (NSException *exception) {
+                    NSLog(@"SmartLink -> sendTestData UDP Socket EnableBroadcast Error reason is : %@", exception.reason);
+                }
+                
+                NSData *data = [sendTestData dataUsingEncoding:NSASCIIStringEncoding];
+                
+                [self.mUdpSocket sendData:data toHost:@"255.255.255.255" port:8300 withTimeout:2 tag:0];
+                //NSString *remote_send_test_data = [NSString stringWithFormat:@"SmartLink -> Send TestData length is : %d", (int)[sendTestData length]];
+                //[MarsCloud_Tools LogPrint:ll_Debug message:remote_send_test_data];
+                
+                //NSLog(@"SmartLink -> Send TestData length is : %d", (int)[sendTestData length]);
+                //NSLog(@"SmartLink -> Send Data length is : %d", (int)[data length]);
+                
+                usleep(3000);
+                
+                [self.mUdpSocket close];
+            }
+        }
+    }
+}
+
+- (void)addSeqPacket:(int)cmdNum
+{
+    int i, value;
+    NSString *temp = [[NSString alloc] init];
+    
+    self.seqData[cmdNum] = self.packetData[cmdNum];
+
+    for (i = 0; i < [seqData[cmdNum] length]; i++)
+    {
+        if (cmdNum == 0) {
+            value = (0x0ff & (i));
+        } else if (cmdNum == 1) {
+            value = (((0x0ff & (i << 1))) | 0x01);
+        } else {
+            value = (((0x0ff & (i << 2))) | 0x02);
+        }
+        
+        
+        if (value == 0) {
+            temp = [temp stringByAppendingString:@"\0"];
+        } else {
+            temp = [temp stringByAppendingFormat:@"%c", value];
+        }
+    }
+    
+    self.seqData[cmdNum] = temp;
+}
+
+- (int)crc8_msb:(int)poly size:(int)size cmdNum:(int)cmdNum
+{
+    int crc = 0x00, tmp;
+    int bit;
+    int i = 0;
+    
+    while (size > 0)
+    {
+        crc ^= [self.packetData[cmdNum] characterAtIndex:i];
+        
+        for (bit = 0; bit < 8; bit++) {
+            if ((0x0ff & (crc & 0x80)) != 0x00) {
+                
+                tmp = (0x0ff & (crc << 1));
+                crc = (tmp ^ poly);
+                
+            } else {
+                
+                crc <<= 1;
+                
+            }
+        }
+        size--;
+        i++;
+    }
+    
+    return crc;
+}
+
+- (void)cmdCryption:(int)cmdUum
+{
+    int i;
+
+    for (i = 0; i < [self.packetData[cmdUum] length]; i++)
+    {
+        tempPacket[i] = [[self.packetData objectAtIndex:cmdUum] characterAtIndex:i] ^ sonkey[i];
+        tempSeq[i] = [[self.seqData objectAtIndex:cmdUum] characterAtIndex:i] ^ sonkey[0];
+    }
+    tempPacket[i] = '\n';
+    tempSeq[i] = '\n';
+}
+
+- (NSString *)randomStringWithLength:(NSInteger)len
+{
+    @autoreleasepool {
+        NSString *letters = [[NSString alloc] initWithString:@"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
+        
+        NSMutableString *randomString = [[NSMutableString alloc] initWithCapacity: len];
+        
+        int rand = arc4random() % [letters length];
+        [randomString appendFormat:@"%C", [letters characterAtIndex:rand]];
+        
+        return randomString;
+    }
+}
+
+- (NSString *)getIPAddress
+{
+    NSString *address = @"error";
+    struct ifaddrs *interfaces = NULL;
+    struct ifaddrs *temp_addr = NULL;
+    int success = 0;
+    // retrieve the current interfaces - returns 0 on success
+    success = getifaddrs(&interfaces);
+    if (success == 0) {
+        // Loop through linked list of interfaces
+        temp_addr = interfaces;
+        while(temp_addr != NULL) {
+            if(temp_addr->ifa_addr->sa_family == AF_INET) {
+                // Check if interface is en0 which is the wifi connection on the iPhone
+                if([[NSString stringWithUTF8String:temp_addr->ifa_name] isEqualToString:@"en0"]) {
+                    // Get NSString from C String
+                    address = [NSString stringWithUTF8String:inet_ntoa(((struct sockaddr_in *)temp_addr->ifa_addr)->sin_addr)];
+                }
+            }
+            temp_addr = temp_addr->ifa_next;
+        }
+    }
+    // Free memory
+    freeifaddrs(interfaces);
+    return address;
+}
+
+#pragma mark - Listening TCP/UDP Packets Methods
+- (void)listenForUDPPackets
+{
+    [MarsCloud_Tools LogPrint:ll_Debug message:@"listenForUDPPackets Start!"];
+    
+    while (_isRunning)
+    {
+        int listeningSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (listeningSocket <= 0) {
+            [MarsCloud_Tools LogPrint:ll_Debug message:@"SmartLink -> listenForUDPPackets Error: listenForPackets - socket() failed."];
+            return;
+        }
+        
+        // set timeout to 2 seconds.
+        struct timeval timeV;
+        timeV.tv_sec = 2;
+        timeV.tv_usec = 0;
+        
+        if (setsockopt(listeningSocket, SOL_SOCKET, SO_RCVTIMEO, &timeV, sizeof(timeV)) == -1) {
+            [MarsCloud_Tools LogPrint:ll_Debug message:@"SmartLink -> listenForUDPPackets Error: listenForPackets - setsockopt failed"];
+            close(listeningSocket);
+            return;
+        }
+        
+        // bind the port
+        struct sockaddr_in sockaddr;
+        memset(&sockaddr, 0, sizeof(sockaddr));
+        
+        sockaddr.sin_len = sizeof(sockaddr);
+        sockaddr.sin_family = AF_INET;
+        sockaddr.sin_port = htons(8208);
+        sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        
+        int status = bind(listeningSocket, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
+        if (status == -1) {
+            [MarsCloud_Tools LogPrint:ll_Debug message:@"SmartLink -> listenForUDPPackets Error: listenForPackets - bind() failed."];
+            close(listeningSocket);
+            return;
+        }
+        
+        // receive
+        struct sockaddr_in receiveSockaddr;
+        socklen_t receiveSockaddrLen = sizeof(receiveSockaddr);
+        
+        size_t bufSize = 9216;
+        void *buf = malloc(bufSize);
+        ssize_t result = recvfrom(listeningSocket, buf, bufSize, 0, (struct sockaddr *)&receiveSockaddr, &receiveSockaddrLen);
+        
+        NSData *data = nil;
+        
+        if (result > 0) {
+            
+            if ((size_t)result != bufSize) {
+                buf = realloc(buf, result);
+            }
+            data = [NSData dataWithBytesNoCopy:buf length:result freeWhenDone:YES];
+            
+            char addrBuf[INET_ADDRSTRLEN];
+            if (inet_ntop(AF_INET, &receiveSockaddr.sin_addr, addrBuf, (size_t)sizeof(addrBuf)) == NULL) {
+                addrBuf[0] = '\0';
+            }
+            
+            NSString *address = [NSString stringWithCString:addrBuf encoding:NSASCIIStringEncoding];
+            NSString *msg = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self didReceiveMessage:msg fromAddress:address];
+            });
+            
+        } else {
+            free(buf);
+        }
+        
+        close(listeningSocket);
+    }
+}
+
+- (void)didReceiveMessage:(NSString *)message fromAddress:(NSString *)address
+{
+    NSString *receive_msg = [NSString stringWithFormat:@"SmartLink -> didReceiveUDPBroadcast!  message is : %@", message];
+    [MarsCloud_Tools LogPrint:ll_Debug message:receive_msg];
+    
+    if ([message containsString:@"OK"])
+    {
+        if (!self.isTCP_ReciverOK && !self.isUDP_ReciverOK)
+        {
+            [MarsCloud_Tools showToastMessage:NSLocalizedString(@"SmartLink Success", @"") length:TOAST_LENGTH_LONG];
+            
+            self._isRunning = NO;
+            self._isConnected = YES;
+            self.isUDP_ReciverOK = YES;
+            
+            [self smartLinkStop];
+        }
+    }
+}
+
+
+- (void)listenForTCPPackets
+{
+    [MarsCloud_Tools LogPrint:ll_Debug message:@"listenForTCPPackets Start!"];
+    
+    // 開一組 TCP Listenling socket.
+    self.receive_TCP_Socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+    
+    @try {
+        NSError *error = nil;
+        
+        [self.receive_TCP_Socket acceptOnPort:8209 error:&(error)];
+    }
+    @catch (NSException *exception) {
+        NSLog(@"SmartLink -> GCDAsyncSocket TCP initialization is Fail; Error reason is : %@", exception.reason);
+    }
+}
+
+#pragma mark - Customize Methods
+- (void)waitingTimeOut
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        
+        self._isConnected = NO;
+        self._isRunning = NO;
+        self.isTCP_ReciverOK = NO;
+        self.isUDP_ReciverOK = NO;
+        
+        [self smartLinkStop];
+        
+        [MarsCloud_Tools showToastMessage:NSLocalizedString(@"dialog_Msg_SmartLink_TimeOut", @"") length:TOAST_LENGTH_LONG];
+        
+    });
+}
+
+- (void)showPW:(UIGestureRecognizer *)recognizer
+{
+    NSIndexPath *index = [NSIndexPath indexPathForRow:2 inSection:0];
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:index];
+    UITextField *textField = nil;
+
+    for (UIView *oneView in cell.contentView.subviews) {
+        if ([oneView isMemberOfClass:[UITextField class]])
+            textField = (UITextField *)oneView;
+    }
+
+    if ([textField isSecureTextEntry]) {
+        textField.secureTextEntry = NO;
+    } else {
+        textField.secureTextEntry = YES;
+    }
+}
+
+
+@end

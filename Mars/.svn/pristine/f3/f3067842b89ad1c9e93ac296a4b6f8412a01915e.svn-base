@@ -1,0 +1,229 @@
+//
+//  APNSIntervalController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 14/1/13.
+//  Copyright (c) 2014年 TUTK. All rights reserved.
+//
+
+#import "APNSIntervalController.h"
+
+@interface APNSIntervalController ()
+
+@end
+
+@implementation APNSIntervalController
+
+@synthesize camera;
+@synthesize labelItems;
+@synthesize origValue;
+@synthesize newValue;
+@synthesize delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<APNSIntervalDelegate>)delegate_
+{
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        self.delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender
+{
+    NSInteger interval;
+
+    switch (newValue) {
+        case 0: interval = 0; break;
+        case 1: interval = 60; break;
+        case 2: interval = 180; break;
+        case 3: interval = 300; break;
+        case 4: interval = 600; break;
+        case 5: interval = 1800; break;
+        case 6: interval = -1; break;
+        default: break;
+    }
+
+    if (newValue != -2 && newValue != origValue)
+    {
+        [database executeUpdate:@"UPDATE device SET interval=? WHERE dev_uid=?", [NSNumber numberWithInt:(int)interval], camera.uid];
+        NSError *error = nil;
+        NSString *systemVer = [[UIDevice currentDevice] systemVersion] ;
+        NSString *appVer = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"];
+        NSString *deviceType = [[UIDevice currentDevice] model];
+        NSString *encodeUrl = [deviceType stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+        NSString *uuid = [[[ UIDevice currentDevice] identifierForVendor] UUIDString];
+        NSString *langCode = [self getLangCode];
+        NSString *appidString = [[NSBundle mainBundle] bundleIdentifier];
+        NSString *hostString = @"http://p2pserver1.mars-semi.com.tw:8888/tpns/apns.php";
+        NSString *argsString = @"%@?cmd=reg_mapping&token=%@&uid=%@&appid=%@&interval=%d";
+        argsString = [argsString stringByAppendingString:@"&lang=%@&udid=%@&os=ios&osver=%@&appver=%@&model=%@"];
+        NSString *getURLString = [NSString stringWithFormat:argsString, hostString, deviceTokenString,  camera.uid, appidString, interval, langCode , uuid,  systemVer , appVer , encodeUrl];
+
+        NSLog( @"stringWithContentsOfURL ==> %@", getURLString );
+
+        NSString *registerResult = [NSString stringWithContentsOfURL:[NSURL URLWithString:getURLString] encoding:NSUTF8StringEncoding error:&error];
+        if (error != nil) {
+            NSLog(@"****[Mapping error] - %@", error);
+        }
+        NSLog( @">>> %@", registerResult );
+    }
+
+    if (self.delegate) [self.delegate didSetAPNSInterval];
+
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (NSString *)getLangCode
+{
+    NSArray *languages = [NSLocale preferredLanguages];
+    NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:
+                          @"zh_TW", @"zh-Hant", @"en_US", @"en", @"fr_FR", @"fr",
+                          @"de_DE", @"de", @"zh_CN", @"zh-Hans", @"ja_JP", @"ja",
+                          @"nl_NL", @"nl", @"it_IT", @"it", @"es_ES", @"es",nil];
+    
+    NSString *code = [dict objectForKey:[languages objectAtIndex:0]];
+    if ( nil == code) {
+        code = @"en_US" ;
+    }
+    
+    return code ;
+}
+
+#pragma mark - View lifecycle
+- (void)viewDidLoad
+{
+    labelItems = [[NSArray alloc] initWithObjects:NSLocalizedString(@"Always ON", @""),
+                                                  NSLocalizedString(@"1 MIN", @""),
+                                                  NSLocalizedString(@"3 MIN", @""),
+                                                  NSLocalizedString(@"5 MIN", @""),
+                                                  NSLocalizedString(@"10 MIN", @""),
+                                                  NSLocalizedString(@"30 MIN", @""),
+                                                  NSLocalizedString(@"OFF", @""), nil];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Back", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    self.navigationItem.title = NSLocalizedString(@"Alert Interval", @"");
+    
+    self.origValue = -2;
+    self.newValue = -2;
+    
+    [super viewDidLoad];
+}
+
+- (void)viewDidUnload
+{
+    self.camera = nil;
+    self.labelItems = nil;
+    self.delegate = nil;
+    [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    self.camera.delegate2 = self;
+    
+    if (database != NULL) {
+        
+        FMResultSet *rs = [database executeQuery:@"SELECT * FROM device"];
+        
+        int cnt = 0;
+        
+        while([rs next] && cnt++ < MAX_CAMERA_LIMIT) {
+            
+            NSString *uid = [rs stringForColumn:@"dev_uid"];
+            NSInteger interval = [rs intForColumn:@"interval"];
+            
+            if ([uid isEqualToString:camera.uid]) {
+                
+                switch (interval) {
+                    case 0:
+                        self.origValue = 0;
+                        break;
+                    case 60:
+                        self.origValue = 1;
+                        break;
+                    case 180:
+                        self.origValue = 2;
+                        break;
+                    case 300:
+                        self.origValue = 3;
+                        break;
+                    case 600:
+                        self.origValue = 4;
+                        break;
+                    case 1800:
+                        self.origValue = 5;
+                        break;
+                    case -1:
+                        self.origValue = 6;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        
+        [rs close];
+    }
+    
+    [super viewWillAppear:animated];
+}
+
+- (void)dealloc
+{
+    self.delegate = nil;
+    [self.labelItems release];
+    [self.camera release];
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return (section == 0) ? [self.labelItems count] : 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSUInteger row = [indexPath row];
+    
+    static NSString *APNSIntervalTableIdentifier = @"APNSIntervalTableIdentifier";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:APNSIntervalTableIdentifier];
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault reuseIdentifier:APNSIntervalTableIdentifier]
+                autorelease];
+    }
+    
+    cell.textLabel.text = [labelItems objectAtIndex:row];
+    cell.accessoryType = (row == self.origValue) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+    
+    return cell;
+}
+
+#pragma mark - TableView Delegate Methods
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    for (UITableViewCell *cell in [self.tableView visibleCells])
+        cell.accessoryType = UITableViewCellAccessoryNone;
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+    cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    
+    self.newValue = [indexPath row];
+    
+    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+@end

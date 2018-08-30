@@ -1,0 +1,171 @@
+//
+//  SearchFromController.m
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 13/12/26.
+//  Copyright (c) 2013年 TUTK. All rights reserved.
+//
+
+#import "SearchFromController.h"
+#import "AppDelegate.h"
+
+@implementation SearchFromController
+
+@synthesize camera;
+@synthesize labelItems;
+@synthesize delegate;
+@synthesize newValue;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<SearchFromDelegate>)delegate_ {
+    
+    self = [super initWithStyle:style];
+    
+    if (self) {
+        
+        self.delegate = delegate_;
+    }
+    
+    return self;
+}
+
+- (IBAction)back:(id)sender {
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (IBAction)done:(id)sender {
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    appDelegate->fromTime = newValue;
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - View lifecycle
+
+- (void)viewDidLoad {
+    
+    self.newValue = -1;
+    
+    labelItems = [[NSArray alloc] initWithObjects:
+                  NSLocalizedString(@"00:00", @""),
+                  NSLocalizedString(@"01:00", @""),
+                  NSLocalizedString(@"02:00", @""),
+                  NSLocalizedString(@"03:00", @""),
+                  NSLocalizedString(@"04:00", @""),
+                  NSLocalizedString(@"05:00", @""),
+                  NSLocalizedString(@"06:00", @""),
+                  NSLocalizedString(@"07:00", @""),
+                  NSLocalizedString(@"08:00", @""),
+                  NSLocalizedString(@"09:00", @""),
+                  NSLocalizedString(@"10:00", @""),
+                  NSLocalizedString(@"11:00", @""),
+                  NSLocalizedString(@"12:00", @""),
+                  NSLocalizedString(@"13:00", @""),
+                  NSLocalizedString(@"14:00", @""),
+                  NSLocalizedString(@"15:00", @""),
+                  NSLocalizedString(@"16:00", @""),
+                  NSLocalizedString(@"17:00", @""),
+                  NSLocalizedString(@"18:00", @""),
+                  NSLocalizedString(@"19:00", @""),
+                  NSLocalizedString(@"20:00", @""),
+                  NSLocalizedString(@"21:00", @""),
+                  NSLocalizedString(@"22:00", @""),
+                  NSLocalizedString(@"23:00", @""), nil];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+                                             initWithTitle:NSLocalizedString(@"Cancel", @"") style:UIBarButtonItemStylePlain target:self action:@selector(back:)];
+    
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+                                              initWithTitle:NSLocalizedString(@"Done", @"") style:UIBarButtonItemStylePlain target:self action:@selector(done:)];
+    
+    
+    self.navigationItem.title = NSLocalizedString(@"Camera", @"");
+    
+    [super viewDidLoad];
+}
+
+- (void)viewDidUnload {
+    
+    self.delegate = nil;
+    self.labelItems = nil;
+    self.camera = nil;
+    [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    self.camera.delegate2 = self;
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    newValue = appDelegate->fromTime;
+    
+    [super viewWillAppear:animated];
+}
+
+- (void)dealloc {
+    
+    self.delegate = nil;
+    [self.labelItems release];
+    [self.camera release];
+    [super dealloc];
+}
+
+#pragma mark - TableView DataSource Methods
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView
+ numberOfRowsInSection:(NSInteger)section {
+    return (section == 0) ? [self.labelItems count] : 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    NSUInteger row = [indexPath row];
+    
+    static NSString *TimePickerTableIdentifier = @"TimePickerTableIdentifier";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:TimePickerTableIdentifier];
+    
+    if (cell == nil) {
+        
+        cell = [[[UITableViewCell alloc]
+                 initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TimePickerTableIdentifier]
+                autorelease];
+    }
+    
+    cell.textLabel.text = [labelItems objectAtIndex:row];
+    
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    if (row == appDelegate->fromTime || self.newValue == row) {
+        cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    } else {
+        [cell setAccessoryType:UITableViewCellAccessoryNone];
+    }
+    
+    return cell;
+}
+
+#pragma mark - TableView Delegate Methods
+- (void)tableView:(UITableView *)tableView
+didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    for (UITableViewCell *cell in [self.tableView visibleCells])
+        cell.accessoryType = UITableViewCellAccessoryNone;
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+    cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    
+    self.newValue = [indexPath row];
+    
+    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+@end
+
+

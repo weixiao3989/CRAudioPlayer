@@ -1,0 +1,39 @@
+//
+//  RecordingModeController.h
+//  IOTCamViewer
+//
+//  Created by tutk on 12/26/11.
+//  Copyright (c) 2011 __MyCompanyName__. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+
+@protocol VideoOutDelegate;
+
+@interface VideoOutController : UITableViewController <MyCameraDelegate> {
+    
+    MyCamera *camera;
+    NSArray *labelItems;
+    NSInteger origValue;
+    NSInteger newValue;
+    
+    id<VideoOutDelegate> delegate;
+}
+
+@property (nonatomic, retain) MyCamera *camera;
+@property (nonatomic, retain) NSArray *labelItems;
+@property (nonatomic) NSInteger origValue;
+@property (nonatomic) NSInteger newValue;
+@property (nonatomic, assign) id<VideoOutDelegate> delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<VideoOutDelegate>)delegate;
+- (IBAction)back:(id)sender;
+
+@end
+
+@protocol VideoOutDelegate
+
+- (void)didSetVideoOut:(NSInteger)value;
+
+@end

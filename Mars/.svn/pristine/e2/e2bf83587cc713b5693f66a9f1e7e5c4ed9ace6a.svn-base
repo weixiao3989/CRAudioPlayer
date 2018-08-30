@@ -1,0 +1,30 @@
+//
+//  UIImage+DrawImage.h
+//
+//  Created by Darktt on 13/6/3.
+//  Copyright (c) 2013 Darktt Personal Company. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+//#import "DTInstancetype.h"
+
+@interface UIImage (DrawImage)
+
+// Draw Gradient Image
++ (instancetype)imageWithColor:(UIColor *)color size:(CGSize)size;
++ (instancetype)drawGradientImageWithRect:(CGRect)frame beginColor:(UIColor *)beginColor endColor:(UIColor *)endColor location:(CGFloat *)loaction;
++ (instancetype)drawGradientImageWithRect:(CGRect)frame gradientColors:(NSArray *)gradientColors location:(CGFloat *)loaction;
+
+// Custom Gradient Image
++ (instancetype)bicycleMapsNavigationImage;
++ (instancetype)redGradientImageWithRect:(CGRect)frame;
++ (instancetype)grayGradientImageWithRect:(CGRect)frame;
++ (instancetype)blueGradientImageWithRect:(CGRect)frame;
++ (instancetype)greenGradientImageWithRect:(CGRect)frame;
++ (instancetype)purpleGradientImageWithRect:(CGRect)frame;
++ (instancetype)lightYellowGradientImageWithRect:(CGRect)frame;
+
+// Draw Rounded Rect Gradient Image
++ (instancetype)drawRounedRectImageWithRect:(CGRect)frame cornerRadius:(CGFloat)cornerRadius gradientColors:(NSArray *)gradientColors lineColor:(UIColor *)lineColor gradientLocation:(CGFloat *)gradientLocation;
+
+@end

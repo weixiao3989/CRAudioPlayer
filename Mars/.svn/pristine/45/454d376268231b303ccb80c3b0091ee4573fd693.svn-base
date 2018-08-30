@@ -1,0 +1,40 @@
+//
+//  APNSIntervalController.h
+//  IOTCamViewer
+//
+//  Created by TUTK_MacMini2 on 14/1/13.
+//  Copyright (c) 2014年 TUTK. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MyCamera.h"
+#import "FMDatabase.h"
+#import "AppDelegate.h"
+
+@protocol APNSIntervalDelegate;
+
+extern FMDatabase *database;
+extern NSString *deviceTokenString;
+
+@interface APNSIntervalController : UITableViewController <MyCameraDelegate>
+{
+}
+
+@property (nonatomic, retain) MyCamera *camera;
+@property (nonatomic, retain) NSArray *labelItems;
+@property (nonatomic) NSInteger origValue;
+@property (nonatomic) NSInteger newValue;
+@property (nonatomic, assign) id<APNSIntervalDelegate> delegate;
+
+- (id)initWithStyle:(UITableViewStyle)style delegate:(id<APNSIntervalDelegate>)delegate;
+- (IBAction)back:(id)sender;
+
+@end
+
+@protocol APNSIntervalDelegate
+
+- (void)didSetAPNSInterval;
+
+@end
+
+

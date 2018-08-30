@@ -1,0 +1,446 @@
+//
+//  CommonUI.m
+//  IOTCamViewer
+//
+//  Created by ossgo on 2014/12/15.
+//  Copyright (c) 2014年 TUTK. All rights reserved.
+//
+
+#import "CommonUI.h"
+#import <objc/message.h>
+
+@interface CommonUI(){
+
+}
+
+
+@end
+
+@implementation CommonUI
+
++(CommonUI*)shareInstance
+{
+    // Persistent instance.
+    static CommonUI *commonUI = nil;
+    if (commonUI != nil)
+    {
+        return commonUI;
+    }
+    
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0
+
+    static dispatch_once_t safer;
+    dispatch_once(&safer, ^(void)
+                  {
+                      commonUI = [[CommonUI alloc] init];
+                     
+                  });
+#else
+  
+    @synchronized([CommonUI class])
+    {
+        if (commonUI == nil)
+        {
+            commonUI = [[CommonUI alloc] init];
+        }
+    }
+#endif
+    
+    return commonUI;
+
+}
+
+
+
+#pragma mark - 轉轉
+//顯示轉轉與提示,提示可為空
+//-(void)showIndicatorWithTip:(NSString*)tipStr
+//{
+//    if (![CommonUI isShowIndicator])
+//    {
+//        IndicatorWithBlackView *indicatorWithBlackView = [[IndicatorWithBlackView alloc]initWithTip:tipStr];
+//        [indicatorWithBlackView show];
+//        [indicatorWithBlackView release];
+//    }
+//    
+//}
+
+
+//顯示轉轉與提示,提示可為空,幾秒後消失
+//-(void)showIndicatorWithTip:(NSString*)tipStr andRemoveAfterDelay:(NSInteger)delay finishBlock:(void(^)(void))finishBlock
+//{
+//    if (![CommonUI isShowIndicator])
+//    {
+//        IndicatorWithBlackView *indicatorWithBlackView = [[IndicatorWithBlackView alloc]initIndicatorWithTip:tipStr andRemoveAfterDelay:delay finishBlock:finishBlock];
+//        [indicatorWithBlackView show];
+//        [indicatorWithBlackView release];
+//    }
+//    
+//}
+
+
+//改變轉轉的提示
+//-(void)changeIndicatorTip:(NSString*)tipStr{
+//    
+//    if ([CommonUI getCurrentIndicatorWithBlackView] && tipStr!=nil)
+//    {
+//        IndicatorWithBlackView *indicatorWithBlackView = [CommonUI getCurrentIndicatorWithBlackView];
+//        indicatorWithBlackView.tipLab.text = NSLocalizedString(tipStr, nil);
+//    }
+//    
+//}
+
+
+//移除轉轉
+//-(void)removeIndicator{
+//    
+//    if ([CommonUI getCurrentIndicatorWithBlackView])
+//    {
+//        IndicatorWithBlackView *indicatorWithBlackView = [CommonUI getCurrentIndicatorWithBlackView];
+//        [indicatorWithBlackView dismiss];
+//    }
+//    
+//}
+
+
+//立即移除轉轉
+//-(void)removeIndicatorImmediately{
+//    
+//    if ([CommonUI getCurrentIndicatorWithBlackView])
+//    {
+//        IndicatorWithBlackView *indicatorWithBlackView = [CommonUI getCurrentIndicatorWithBlackView];
+//        [indicatorWithBlackView dismissImmediately];
+//    }
+//    
+//}
+
+
+//顯示某個訊息,並在N秒後移除轉轉
+//-(void)removeIndicatorWithTip:(NSString*)tipStr afterDelay:(NSInteger)delay{
+//    
+//    if ([CommonUI getCurrentIndicatorWithBlackView])
+//    {
+//        IndicatorWithBlackView *indicatorWithBlackView = [CommonUI getCurrentIndicatorWithBlackView];
+//        [indicatorWithBlackView removeIndicatorWithTip:tipStr afterDelay:delay];
+//    }
+//    
+//}
+
+
+//顯示某個訊息,並在N秒後移除轉轉 (有可能等待 N 秒後,消失後再做某件時間很長的事情,感覺已經退掉了,但卻在做finished內的事情,finishBlock內處理速度快的可以用這個)
+//-(void)removeIndicatorWithTip:(NSString*)tipStr afterDelay:(NSInteger)delay finishBlock:(void(^)(void))finishBlock{
+//    
+//    if ([CommonUI getCurrentIndicatorWithBlackView])
+//    {
+//        IndicatorWithBlackView *indicatorWithBlackView = [CommonUI getCurrentIndicatorWithBlackView];
+//        [indicatorWithBlackView removeIndicatorWithTip:tipStr afterDelay:delay finishBlock:finishBlock];
+//    }
+//    
+//}
+
+
+#pragma mark - Navigation
++(void)changeNavigationBG:(UINavigationController*)nc{
+
+    UIImage *navigationbarBG = [UIImage imageNamed:@"bg_navi"];
+    [nc.navigationBar setBackgroundImage:navigationbarBG forBarMetrics:UIBarMetricsDefault];
+    
+    nc.navigationBar.tintColor = [UIColor whiteColor];
+
+    nc.navigationController.navigationBar.translucent = NO;
+    
+}
+
+
+//左上角按鈕改成箭頭
++(void)changeNavigationBackBtnToArrow:(UIViewController*)vc btnTarget:(id)target actionSelector:(SEL)sel{
+    
+    //左上角按鈕
+    UIButton *backButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    backButton.frame = CGRectMake(0, 0, 34, 34); //原本44圖太大 改成34 感應區塊不會改變
+    [backButton setBackgroundImage:[UIImage imageNamed:@"btn_back_n" ] forState:UIControlStateNormal];
+    [backButton setBackgroundImage:[UIImage imageNamed:@"btn_back_h"] forState:UIControlStateHighlighted];
+    [backButton addTarget:target action:sel forControlEvents:UIControlEventTouchUpInside];
+    
+    //微調左上角按鈕位置
+    UIBarButtonItem *negativeSpacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+    [negativeSpacer setWidth:-10];
+    
+    UIBarButtonItem * backBBItem = [[UIBarButtonItem alloc]initWithCustomView:backButton];
+    vc.navigationItem.leftBarButtonItems = [NSArray arrayWithObjects:negativeSpacer,backBBItem,nil];
+    [negativeSpacer release];
+    [backBBItem release];
+
+}
+
+
+//左上角按鈕改成漢堡
++(void)changeNavigationBarBtnToHamburger:(UIViewController*)vc actionSelector:(SEL)sel{
+
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    [button setBackgroundImage:[UIImage imageNamed:@"btn_leftmenu_n"] forState:UIControlStateNormal];
+    [button setBackgroundImage:[UIImage imageNamed:@"btn_leftmenu_h"] forState:UIControlStateHighlighted];
+    button.frame=CGRectMake(0.0, 0.0, 38.0, 38.0);
+    [button addTarget:vc action:sel forControlEvents:UIControlEventTouchUpInside];
+    
+    UIBarButtonItem *moreSetButton = [[UIBarButtonItem alloc] initWithCustomView:button];
+    UIBarButtonItem *negativeSpacer = [[UIBarButtonItem alloc]
+                                       initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace
+                                       target:nil action:nil];
+    negativeSpacer.width = -14;
+    vc.navigationItem.leftBarButtonItems = @[negativeSpacer, moreSetButton];
+    [moreSetButton release];
+    [negativeSpacer release];
+
+}
+
+
+//左上角按鈕改成取消
++(void)changeNavigationBarLeftBtnToCancel:(UIViewController*)vc actionSelector:(SEL)sel{
+    
+    //左上角 按鈕
+    UIButton*leftButton = [[UIButton alloc]initWithFrame:CGRectMake(0,0,60,44)];
+    leftButton.backgroundColor = [UIColor clearColor];
+    leftButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
+    [leftButton setTitle:NSLocalizedString(@"Cancel", @"") forState:UIControlStateNormal];
+    leftButton.titleLabel.font = [UIFont systemFontOfSize:16];
+    [leftButton addTarget:vc action:sel forControlEvents:UIControlEventTouchUpInside];
+    UIBarButtonItem*leftBarButtonItem = [[UIBarButtonItem alloc]initWithCustomView:leftButton];
+    [leftButton release];
+    
+    UIBarButtonItem *negativeSpacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+    [negativeSpacer setWidth:-6];
+    
+    vc.navigationItem.leftBarButtonItems = @[negativeSpacer,leftBarButtonItem];
+    [leftBarButtonItem release];
+    [negativeSpacer release];
+
+}
+
+
+//右上角按鈕
++(void)changeNavigationBarRightBtn:(UIViewController*)vc btnTitleName:(NSString*)btnTitleName actionSelector:(SEL)sel{
+    
+    UIButton*rightButton = [[UIButton alloc]initWithFrame:CGRectMake(0,0,60,44)];
+    rightButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight;
+    [rightButton setTitle:NSLocalizedString(btnTitleName, @"") forState:UIControlStateNormal];
+    rightButton.titleLabel.font = [UIFont systemFontOfSize:16];
+    [rightButton addTarget:vc action:sel forControlEvents:UIControlEventTouchUpInside];
+    UIBarButtonItem*rightItem = [[UIBarButtonItem alloc]initWithCustomView:rightButton];
+    [rightButton release];
+    
+    UIBarButtonItem *negativeSpacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
+    [negativeSpacer setWidth:-8];
+    
+    vc.navigationItem.rightBarButtonItems = @[negativeSpacer, rightItem];
+    [rightItem release];
+    [negativeSpacer release];
+    
+}
+
+
+#pragma mark - draw code
+//畫個實心有顏色圈圈
++(UIImage *)drawCircleImageWithLengthside:(float)lengthSide circleRadius:(float)circleRadius fillColor:(UIColor*)fillColor
+{
+    //圓圈距離邊的距離
+    CGRect rect = CGRectMake(0.0f, 0.0f, lengthSide, lengthSide);
+    
+    UIGraphicsBeginImageContextWithOptions(rect.size, NO, [UIScreen mainScreen].scale);
+    
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    //CGContextSetLineWidth(context, 1.0);
+    
+    CGFloat red = 0.0, green = 0.0, blue = 0.0, alpha =0.0;
+    [fillColor getRed:&red green:&green blue:&blue alpha:&alpha];
+    
+    CGContextSetRGBFillColor(context, red, green, blue, alpha);
+    
+    CGRect circleRect = CGRectMake((lengthSide-circleRadius)/2,
+                                   (lengthSide-circleRadius)/2,
+                                   circleRadius,
+                                   circleRadius);
+    
+    CGContextFillEllipseInRect(context, circleRect);
+    
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return image;
+}
+
+
+//畫一張有顏色的圖(給btn用)
++(UIImage *)imageWithColor:(UIColor *)color
+{
+    CGRect rect = CGRectMake(0.0f, 0.0f, 1.0f, 1.0f);
+    UIGraphicsBeginImageContext(rect.size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    CGContextSetFillColorWithColor(context, [color CGColor]);
+    CGContextFillRect(context, rect);
+    
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return image;
+}
+
+
+#pragma mark - 其他
+//取得目前螢幕高度（已根據ios8的調整）
++(CGSize)getScreenSize {
+    CGSize screenSize = [UIScreen mainScreen].bounds.size;
+    if ((NSFoundationVersionNumber <= NSFoundationVersionNumber_iOS_7_1) && UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)) {
+        return CGSizeMake(screenSize.height, screenSize.width);
+    }
+    return screenSize;
+}
+
+
+//取的最上層的viewController
++(UIViewController *)appRootViewController
+{
+    UIViewController *appRootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+    UIViewController *topVC = appRootVC;
+    while (topVC.presentedViewController) {
+        topVC = topVC.presentedViewController;
+    }
+    return topVC;
+}
+
+
+//轉轉跟黑色半透明色片
++(UIView*)indicatorBlackViewWithTip:(NSString*)tipStr{
+
+    UIView *black = [[UIView alloc]initWithFrame:CGRectMake(0, 0, [self getScreenSize].width, [self getScreenSize].height)];
+    black.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.48];
+    
+    //轉轉
+    UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite];
+    indicator.center = CGPointMake(black.frame.size.width/2, black.frame.size.height/2);
+    [indicator startAnimating];
+    [black addSubview:indicator];
+    [indicator release];
+    
+    if (tipStr!=nil && tipStr.length>0)
+    {
+        indicator.center = CGPointMake(black.frame.size.width/2, black.frame.size.height/2-10);
+        
+        //文字提示
+        UILabel *tipLab = [[UILabel alloc]initWithFrame:CGRectMake(0, CGRectGetMinY(indicator.frame)+20, black.frame.size.width, 40)];
+        tipLab.font = [UIFont systemFontOfSize:16];
+        tipLab.textColor = [UIColor whiteColor];
+        tipLab.textAlignment = NSTextAlignmentCenter;
+        tipLab.tag = 7777;
+        tipLab.text = NSLocalizedString(tipStr, 0);
+        [black addSubview:tipLab];
+        [tipLab release];
+        
+    }
+    
+    // 會crash!Bug! 64bit機種不會crash
+    //[indicator release];
+    
+    return black;
+}
+
+
+//最上層的VC是否有CustomAlertView
+//+(BOOL)isShowCustomAlertView{
+//
+//    // CustomAlertView 已經出現過了,不再出現
+//    for (id view in [[CommonUI appRootViewController].view subviews])
+//    {
+//        if ([view isKindOfClass:[CustomAlertView class]])
+//        {
+//            NSLog(@"alertView 出現過了 不再出現");
+//            return YES;
+//        }
+//    }
+//    
+//    return NO;
+//}
+
+
+//最上層的VC是否有Indicator
+//+(BOOL)isShowIndicator{
+//
+//    for (id view in [[CommonUI appRootViewController].view subviews])
+//    {
+//        if ([view isKindOfClass:[IndicatorWithBlackView class]])
+//        {
+//            NSLog(@"IndicatorWithBlackView 出現過了 不再出現");
+//            return YES;
+//        }
+//    }
+//    
+//    return NO;
+//
+//}
+
+
+//取得最上層 CustomAlertView
+//+(CustomAlertView*)getCurrentCustomAlertView{
+//    
+//    for (id view in [[CommonUI appRootViewController].view subviews])
+//    {
+//        if ([view isKindOfClass:[CustomAlertView class]])
+//        {
+//            NSLog(@"找到 CustomAlertView");
+//            return view;
+//        }
+//    }
+//    
+//    return nil;
+//}
+
+
+//取得最上層 Indicator
+//+(IndicatorWithBlackView*)getCurrentIndicatorWithBlackView{
+//    
+//    for (id view in [[CommonUI appRootViewController].view subviews])
+//    {
+//        if ([view isKindOfClass:[IndicatorWithBlackView class]])
+//        {
+//            NSLog(@"找到 IndicatorWithBlackView");
+//            return view;
+//        }
+//    }
+//    return nil;
+//}
+
+
++ (UIImage *)resizeImageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize{
+    
+    UIGraphicsBeginImageContextWithOptions(newSize, NO, 0.0);
+    [image drawInRect:CGRectMake(0, 0, newSize.width, newSize.height)];
+    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return newImage;
+}
+
+
+#pragma mark - Screen rotate
+//強制轉到直向
++(void)rotateToPortrait:(UIViewController*)vc{
+
+    if(UIDeviceOrientationIsLandscape(vc.interfaceOrientation))
+    {
+        if ([[UIDevice currentDevice] respondsToSelector:@selector(setOrientation:)])
+        {
+#if __LP64__ || (TARGET_OS_EMBEDDED && !TARGET_OS_IPHONE) || TARGET_OS_WIN32 || NS_BUILD_32_LIKE_64
+            //iphone 5s 64bit OK
+            objc_msgSend([UIDevice currentDevice], @selector(setOrientation:), @(UIDeviceOrientationPortrait));
+#else
+            //ipod 5 OK
+            objc_msgSend([UIDevice currentDevice], @selector(setOrientation:), UIDeviceOrientationPortrait);
+#endif
+        }
+    }
+
+}
+
+
+@end
